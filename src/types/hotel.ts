@@ -1,33 +1,39 @@
-export type RoomFeature = 'AC' | 'TV' | 'Balcony' | 'Sea View' | 'King Bed' | 'Twin Beds' | 'Mini Fridge' | 'WiFi' | 'Bathtub' | 'Room Service';
+export type RoomFeature = 'AC' | 'TV' | 'Balcony' | 'Sea View' | 'King Bed' | 'Twin Beds' | 'Mini Fridge' | 'WiFi' | 'Bathtub' | 'Room Service' | 'Workspace' | 'Premium Bath' | 'Living Area' | 'Jacuzzi' | 'Private Pool' | 'Butler Service';
 
-export type RoomType = 'Standard' | 'Deluxe' | 'Executive' | 'Suite' | 'Presidential';
+export type RoomType = 'standard' | 'deluxe' | 'executive' | 'suite' | 'presidential';
 
 export interface Room {
   id: string;
-  roomNumber: string;
+  room_number: string;
   type: RoomType;
-  price: number;
-  features: RoomFeature[];
-  description: string;
-  image: string;
-  isAvailable: boolean;
+  name: string;
+  description: string | null;
+  price_per_night: number;
+  capacity: number;
+  features: string[];
+  image_url: string | null;
+  is_available: boolean;
 }
 
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'checked-in' | 'checked-out';
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+
+export type PaymentStatus = 'pending' | 'confirmed';
 
 export interface Booking {
   id: string;
-  referenceNumber: string;
-  roomId: string;
-  guestName: string;
-  guestEmail: string;
-  guestPhone: string;
-  checkIn: string;
-  checkOut: string;
-  totalAmount: number;
-  status: BookingStatus;
-  paymentProof?: string;
-  createdAt: string;
+  reference_number: string;
+  room_id: string;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string;
+  check_in_date: string;
+  check_out_date: string;
+  total_amount: number;
+  booking_status: BookingStatus;
+  payment_status: PaymentStatus;
+  payment_method: string | null;
+  special_requests: string | null;
+  created_at: string;
 }
 
 export interface PaymentDetails {

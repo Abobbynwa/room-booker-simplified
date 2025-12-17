@@ -9,73 +9,103 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getBookings, updateBookingStatus, deleteBooking, updateRoomAvailability, getRoomAvailability } from '@/lib/bookingStore';
-import { rooms as allRooms } from '@/data/rooms';
+import { fetchAllBookings, fetchRooms, updateBookingStatus, deleteBooking, updateRoomAvailability } from '@/lib/api';
 import { Booking, BookingStatus, Room } from '@/types/hotel';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye } from 'lucide-react';
+import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2 } from 'lucide-react';
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   pending: { label: 'Pending', color: 'bg-yellow-500' },
   confirmed: { label: 'Confirmed', color: 'bg-green-500' },
   cancelled: { label: 'Cancelled', color: 'bg-destructive' },
-  'checked-in': { label: 'Checked In', color: 'bg-blue-500' },
-  'checked-out': { label: 'Checked Out', color: 'bg-muted-foreground' },
+  completed: { label: 'Completed', color: 'bg-muted-foreground' },
 };
 
 const Admin = () => {
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
-  const [roomAvailability, setRoomAvailability] = useState<Record<string, boolean>>({});
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
-    setBookings(getBookings());
-    setRoomAvailability(getRoomAvailability());
+    Promise.all([fetchAllBookings(), fetchRooms()])
+      .then(([bookingsData, roomsData]) => {
+        setBookings(bookingsData);
+        setRooms(roomsData);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const refreshBookings = () => {
-    setBookings(getBookings());
+  const refreshData = async () => {
+    const [bookingsData, roomsData] = await Promise.all([fetchAllBookings(), fetchRooms()]);
+    setBookings(bookingsData);
+    setRooms(roomsData);
   };
 
-  const handleStatusChange = (referenceNumber: string, newStatus: BookingStatus) => {
-    updateBookingStatus(referenceNumber, newStatus);
-    refreshBookings();
-    toast({
-      title: 'Status Updated',
-      description: `Booking ${referenceNumber} is now ${statusConfig[newStatus].label}.`,
-    });
-  };
-
-  const handleDeleteBooking = (referenceNumber: string) => {
-    if (confirm('Are you sure you want to delete this booking?')) {
-      deleteBooking(referenceNumber);
-      refreshBookings();
+  const handleStatusChange = async (id: string, newStatus: BookingStatus) => {
+    try {
+      await updateBookingStatus(id, newStatus, newStatus === 'confirmed' ? 'confirmed' : undefined);
+      await refreshData();
       toast({
-        title: 'Booking Deleted',
-        description: `Booking ${referenceNumber} has been deleted.`,
+        title: 'Status Updated',
+        description: `Booking is now ${statusConfig[newStatus].label}.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update booking status.',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleRoomAvailability = (roomId: string, isAvailable: boolean) => {
-    updateRoomAvailability(roomId, isAvailable);
-    setRoomAvailability(prev => ({ ...prev, [roomId]: isAvailable }));
-    toast({
-      title: 'Room Updated',
-      description: `Room is now ${isAvailable ? 'available' : 'unavailable'}.`,
-    });
+  const handleDeleteBooking = async (id: string) => {
+    if (confirm('Are you sure you want to delete this booking?')) {
+      try {
+        await deleteBooking(id);
+        await refreshData();
+        toast({
+          title: 'Booking Deleted',
+          description: 'Booking has been deleted.',
+        });
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete booking.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleRoomAvailability = async (roomId: string, isAvailable: boolean) => {
+    try {
+      await updateRoomAvailability(roomId, isAvailable);
+      await refreshData();
+      toast({
+        title: 'Room Updated',
+        description: `Room is now ${isAvailable ? 'available' : 'unavailable'}.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update room.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const filteredBookings = bookings.filter(booking => {
     const matchesSearch = 
-      booking.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.guestEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
+      booking.reference_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.guest_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.guest_email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || booking.booking_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -89,15 +119,24 @@ const Admin = () => {
 
   const stats = {
     totalBookings: bookings.length,
-    pendingBookings: bookings.filter(b => b.status === 'pending').length,
-    confirmedBookings: bookings.filter(b => b.status === 'confirmed').length,
-    totalRevenue: bookings.filter(b => b.status !== 'cancelled').reduce((sum, b) => sum + b.totalAmount, 0),
+    pendingBookings: bookings.filter(b => b.booking_status === 'pending').length,
+    confirmedBookings: bookings.filter(b => b.booking_status === 'confirmed').length,
+    totalRevenue: bookings.filter(b => b.booking_status !== 'cancelled').reduce((sum, b) => sum + b.total_amount, 0),
   };
 
-  const getRoomWithAvailability = (room: Room) => ({
-    ...room,
-    isAvailable: roomAvailability[room.id] !== undefined ? roomAvailability[room.id] : room.isAvailable,
-  });
+  const getRoomById = (roomId: string) => rooms.find(r => r.id === roomId);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 pt-20 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gold" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -199,8 +238,7 @@ const Admin = () => {
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="confirmed">Confirmed</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="checked-in">Checked In</SelectItem>
-                            <SelectItem value="checked-out">Checked Out</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -223,40 +261,40 @@ const Admin = () => {
                           </TableHeader>
                           <TableBody>
                             {filteredBookings.map(booking => {
-                              const room = allRooms.find(r => r.id === booking.roomId);
+                              const room = getRoomById(booking.room_id);
+                              const typeLabel = room ? room.type.charAt(0).toUpperCase() + room.type.slice(1) : '';
                               return (
                                 <TableRow key={booking.id}>
-                                  <TableCell className="font-mono text-sm">{booking.referenceNumber}</TableCell>
+                                  <TableCell className="font-mono text-sm">{booking.reference_number}</TableCell>
                                   <TableCell>
                                     <div>
-                                      <p className="font-medium">{booking.guestName}</p>
-                                      <p className="text-sm text-muted-foreground">{booking.guestPhone}</p>
+                                      <p className="font-medium">{booking.guest_name}</p>
+                                      <p className="text-sm text-muted-foreground">{booking.guest_phone}</p>
                                     </div>
                                   </TableCell>
-                                  <TableCell>{room?.type} ({room?.roomNumber})</TableCell>
+                                  <TableCell>{typeLabel} ({room?.room_number})</TableCell>
                                   <TableCell>
                                     <div className="text-sm">
-                                      <p>{format(new Date(booking.checkIn), 'MMM d')}</p>
-                                      <p className="text-muted-foreground">to {format(new Date(booking.checkOut), 'MMM d')}</p>
+                                      <p>{format(new Date(booking.check_in_date), 'MMM d')}</p>
+                                      <p className="text-muted-foreground">to {format(new Date(booking.check_out_date), 'MMM d')}</p>
                                     </div>
                                   </TableCell>
-                                  <TableCell className="font-medium">{formatPrice(booking.totalAmount)}</TableCell>
+                                  <TableCell className="font-medium">{formatPrice(booking.total_amount)}</TableCell>
                                   <TableCell>
                                     <Select
-                                      value={booking.status}
-                                      onValueChange={(v) => handleStatusChange(booking.referenceNumber, v as BookingStatus)}
+                                      value={booking.booking_status}
+                                      onValueChange={(v) => handleStatusChange(booking.id, v as BookingStatus)}
                                     >
                                       <SelectTrigger className="w-32">
-                                        <Badge className={`${statusConfig[booking.status].color} text-white`}>
-                                          {statusConfig[booking.status].label}
+                                        <Badge className={`${statusConfig[booking.booking_status].color} text-white`}>
+                                          {statusConfig[booking.booking_status].label}
                                         </Badge>
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="pending">Pending</SelectItem>
                                         <SelectItem value="confirmed">Confirmed</SelectItem>
                                         <SelectItem value="cancelled">Cancelled</SelectItem>
-                                        <SelectItem value="checked-in">Checked In</SelectItem>
-                                        <SelectItem value="checked-out">Checked Out</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
@@ -277,37 +315,37 @@ const Admin = () => {
                                               <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Reference</p>
-                                                  <p className="font-mono">{selectedBooking.referenceNumber}</p>
+                                                  <p className="font-mono">{selectedBooking.reference_number}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Status</p>
-                                                  <Badge className={`${statusConfig[selectedBooking.status].color} text-white`}>
-                                                    {statusConfig[selectedBooking.status].label}
+                                                  <Badge className={`${statusConfig[selectedBooking.booking_status].color} text-white`}>
+                                                    {statusConfig[selectedBooking.booking_status].label}
                                                   </Badge>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Guest Name</p>
-                                                  <p className="font-medium">{selectedBooking.guestName}</p>
+                                                  <p className="font-medium">{selectedBooking.guest_name}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Email</p>
-                                                  <p>{selectedBooking.guestEmail}</p>
+                                                  <p>{selectedBooking.guest_email}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Phone</p>
-                                                  <p>{selectedBooking.guestPhone}</p>
+                                                  <p>{selectedBooking.guest_phone}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Amount</p>
-                                                  <p className="font-bold text-gold">{formatPrice(selectedBooking.totalAmount)}</p>
+                                                  <p className="font-bold text-gold">{formatPrice(selectedBooking.total_amount)}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Check-in</p>
-                                                  <p>{format(new Date(selectedBooking.checkIn), 'PPP')}</p>
+                                                  <p>{format(new Date(selectedBooking.check_in_date), 'PPP')}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Check-out</p>
-                                                  <p>{format(new Date(selectedBooking.checkOut), 'PPP')}</p>
+                                                  <p>{format(new Date(selectedBooking.check_out_date), 'PPP')}</p>
                                                 </div>
                                               </div>
                                             </div>
@@ -317,7 +355,7 @@ const Admin = () => {
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => handleDeleteBooking(booking.referenceNumber)}
+                                        onClick={() => handleDeleteBooking(booking.id)}
                                         className="text-destructive hover:text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -357,25 +395,25 @@ const Admin = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {allRooms.slice(0, 50).map(room => {
-                            const roomWithAvail = getRoomWithAvailability(room);
+                          {rooms.slice(0, 50).map(room => {
+                            const typeLabel = room.type.charAt(0).toUpperCase() + room.type.slice(1);
                             return (
                               <TableRow key={room.id}>
-                                <TableCell className="font-medium">{room.roomNumber}</TableCell>
-                                <TableCell>{room.type}</TableCell>
-                                <TableCell>{formatPrice(room.price)}</TableCell>
+                                <TableCell className="font-medium">{room.room_number}</TableCell>
+                                <TableCell>{typeLabel}</TableCell>
+                                <TableCell>{formatPrice(room.price_per_night)}</TableCell>
                                 <TableCell>
-                                  <Badge variant={roomWithAvail.isAvailable ? 'default' : 'destructive'}>
-                                    {roomWithAvail.isAvailable ? 'Available' : 'Unavailable'}
+                                  <Badge variant={room.is_available ? 'default' : 'destructive'}>
+                                    {room.is_available ? 'Available' : 'Unavailable'}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleRoomAvailability(room.id, !roomWithAvail.isAvailable)}
+                                    onClick={() => handleRoomAvailability(room.id, !room.is_available)}
                                   >
-                                    {roomWithAvail.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                                    {room.is_available ? 'Mark Unavailable' : 'Mark Available'}
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -384,7 +422,11 @@ const Admin = () => {
                         </TableBody>
                       </Table>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-4">Showing first 50 rooms. Full room management requires backend integration.</p>
+                    {rooms.length > 50 && (
+                      <p className="text-sm text-muted-foreground mt-4 text-center">
+                        Showing first 50 rooms. Use filters to find specific rooms.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
