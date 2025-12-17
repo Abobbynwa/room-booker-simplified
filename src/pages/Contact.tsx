@@ -1,7 +1,7 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
-import { contactInfo } from '@/data/rooms';
+import { contactInfo } from '@/lib/api';
 import { Mail, Phone, MessageCircle, MapPin } from 'lucide-react';
 
 const Contact = () => {
@@ -45,10 +45,10 @@ const Contact = () => {
                   </div>
                   <h3 className="font-semibold mb-2">Call Us</h3>
                   <a 
-                    href={`tel:${contactInfo.phone}`}
+                    href={`tel:${contactInfo.whatsapp}`}
                     className="text-muted-foreground hover:text-gold transition-colors text-sm"
                   >
-                    {contactInfo.phone}
+                    {contactInfo.whatsapp}
                   </a>
                 </CardContent>
               </Card>

@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X } from 'lucide-react';
 
-const allFeatures: RoomFeature[] = ['AC', 'TV', 'Balcony', 'Sea View', 'King Bed', 'Twin Beds', 'Mini Fridge', 'WiFi', 'Bathtub', 'Room Service'];
-const roomTypes: RoomType[] = ['Standard', 'Deluxe', 'Executive', 'Suite', 'Presidential'];
+const allFeatures: RoomFeature[] = ['AC', 'TV', 'Balcony', 'Sea View', 'Mini Fridge', 'WiFi', 'Room Service', 'Workspace', 'Premium Bath', 'Living Area', 'Jacuzzi'];
+const roomTypes: RoomType[] = ['standard', 'deluxe', 'executive', 'suite', 'presidential'];
 
 interface RoomFiltersProps {
   selectedType: RoomType | 'all';
@@ -51,7 +51,9 @@ export function RoomFilters({
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             {roomTypes.map(type => (
-              <SelectItem key={type} value={type}>{type}</SelectItem>
+              <SelectItem key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

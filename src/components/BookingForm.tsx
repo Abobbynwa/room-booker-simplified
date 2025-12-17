@@ -7,11 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, differenceInDays, addDays } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { CalendarIcon, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { paymentDetails } from '@/data/rooms';
-import { generateReferenceNumber, saveBooking } from '@/lib/bookingStore';
+import { paymentDetails, createBooking } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface BookingFormProps {
@@ -30,7 +29,7 @@ export function BookingForm({ room }: BookingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
-  const totalAmount = nights * room.price;
+  const totalAmount = nights * room.price_per_night;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -69,30 +68,32 @@ export function BookingForm({ room }: BookingFormProps) {
 
     setIsSubmitting(true);
 
-    const referenceNumber = generateReferenceNumber();
-    
-    const booking = {
-      id: crypto.randomUUID(),
-      referenceNumber,
-      roomId: room.id,
-      guestName,
-      guestEmail,
-      guestPhone,
-      checkIn: checkIn.toISOString(),
-      checkOut: checkOut.toISOString(),
-      totalAmount,
-      status: 'pending' as const,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const booking = await createBooking({
+        room_id: room.id,
+        guest_name: guestName,
+        guest_email: guestEmail,
+        guest_phone: guestPhone,
+        check_in_date: format(checkIn, 'yyyy-MM-dd'),
+        check_out_date: format(checkOut, 'yyyy-MM-dd'),
+        total_amount: totalAmount,
+      });
 
-    saveBooking(booking);
+      toast({
+        title: 'Booking Created!',
+        description: `Your reference number is ${booking.reference_number}. Please complete payment to confirm.`,
+      });
 
-    toast({
-      title: 'Booking Created!',
-      description: `Your reference number is ${referenceNumber}. Please complete payment to confirm.`,
-    });
-
-    navigate(`/booking-confirmation/${referenceNumber}`);
+      navigate(`/booking-confirmation/${booking.reference_number}`);
+    } catch (error) {
+      toast({
+        title: 'Booking Failed',
+        description: 'Unable to create booking. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -200,7 +201,7 @@ export function BookingForm({ room }: BookingFormProps) {
           {nights > 0 && (
             <div className="bg-accent/50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span>{formatPrice(room.price)} × {nights} night{nights > 1 ? 's' : ''}</span>
+                <span>{formatPrice(room.price_per_night)} × {nights} night{nights > 1 ? 's' : ''}</span>
                 <span>{formatPrice(totalAmount)}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg border-t border-border pt-2">
