@@ -15,7 +15,8 @@ import { Booking, BookingStatus, Room } from '@/types/hotel';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut } from 'lucide-react';
+import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut, ShieldCheck } from 'lucide-react';
+import { UserManagement } from '@/components/UserManagement';
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   pending: { label: 'Pending', color: 'bg-yellow-500' },
@@ -231,6 +232,10 @@ const Admin = () => {
               <TabsList className="mb-6">
                 <TabsTrigger value="bookings">Bookings</TabsTrigger>
                 <TabsTrigger value="rooms">Rooms</TabsTrigger>
+                <TabsTrigger value="users" className="gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Users
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="bookings">
@@ -448,6 +453,10 @@ const Admin = () => {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="users">
+                <UserManagement />
               </TabsContent>
             </Tabs>
           </div>
