@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -12,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { fetchAllBookings, fetchRooms, updateBookingStatus, deleteBooking, updateRoomAvailability } from '@/lib/api';
 import { Booking, BookingStatus, Room } from '@/types/hotel';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2 } from 'lucide-react';
+import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut } from 'lucide-react';
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   pending: { label: 'Pending', color: 'bg-yellow-500' },
@@ -24,12 +26,20 @@ const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
 
 const Admin = () => {
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+    toast({ title: 'Signed out successfully' });
+  };
 
   useEffect(() => {
     Promise.all([fetchAllBookings(), fetchRooms()])
@@ -145,8 +155,17 @@ const Admin = () => {
       <main className="flex-1 pt-20">
         <section className="py-12 bg-card border-b border-border">
           <div className="container mx-auto px-4">
-            <span className="text-gold uppercase tracking-[0.2em] text-sm font-medium">Management</span>
-            <h1 className="text-4xl md:text-5xl font-serif font-bold mt-2">Admin Panel</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <span className="text-gold uppercase tracking-[0.2em] text-sm font-medium">Management</span>
+                <h1 className="text-4xl md:text-5xl font-serif font-bold mt-2">Admin Panel</h1>
+                <p className="text-muted-foreground mt-2">Signed in as {user?.email}</p>
+              </div>
+              <Button variant="outline" onClick={handleSignOut} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </section>
 
