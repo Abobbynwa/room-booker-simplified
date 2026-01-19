@@ -60,11 +60,27 @@ const Admin = () => {
 
   const handleStatusChange = async (id: string, newStatus: BookingStatus) => {
     try {
-      await updateBookingStatus(id, newStatus, newStatus === 'confirmed' ? 'confirmed' : undefined);
+      const booking = bookings.find(b => b.id === id);
+      const room = booking ? getRoomById(booking.room_id) : undefined;
+      
+      await updateBookingStatus(
+        id, 
+        newStatus, 
+        newStatus === 'confirmed' ? 'confirmed' : undefined,
+        booking ? {
+          guest_name: booking.guest_name,
+          guest_email: booking.guest_email,
+          reference_number: booking.reference_number,
+          check_in_date: booking.check_in_date,
+          check_out_date: booking.check_out_date,
+          room_name: room?.name,
+          total_amount: booking.total_amount,
+        } : undefined
+      );
       await refreshData();
       toast({
         title: 'Status Updated',
-        description: `Booking is now ${statusConfig[newStatus].label}.`,
+        description: `Booking is now ${statusConfig[newStatus].label}. Notification sent to guest.`,
       });
     } catch (error) {
       toast({

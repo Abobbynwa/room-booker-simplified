@@ -187,7 +187,16 @@ export async function fetchAllBookings(): Promise<Booking[]> {
 export async function updateBookingStatus(
   id: string, 
   bookingStatus: BookingStatus,
-  paymentStatus?: PaymentStatus
+  paymentStatus?: PaymentStatus,
+  bookingDetails?: {
+    guest_name: string;
+    guest_email: string;
+    reference_number: string;
+    check_in_date: string;
+    check_out_date: string;
+    room_name?: string;
+    total_amount: number;
+  }
 ): Promise<void> {
   const updates: Record<string, unknown> = { booking_status: bookingStatus };
   if (paymentStatus) {
@@ -200,6 +209,28 @@ export async function updateBookingStatus(
     .eq('id', id);
   
   if (error) throw error;
+
+  // Send email notification if booking details are provided
+  if (bookingDetails) {
+    try {
+      await supabase.functions.invoke('send-booking-notification', {
+        body: {
+          guest_name: bookingDetails.guest_name,
+          guest_email: bookingDetails.guest_email,
+          reference_number: bookingDetails.reference_number,
+          booking_status: bookingStatus,
+          payment_status: paymentStatus || 'pending',
+          check_in_date: bookingDetails.check_in_date,
+          check_out_date: bookingDetails.check_out_date,
+          room_name: bookingDetails.room_name,
+          total_amount: bookingDetails.total_amount,
+        },
+      });
+    } catch (notificationError) {
+      // Log error but don't fail the status update
+      console.error('Failed to send booking notification:', notificationError);
+    }
+  }
 }
 
 export async function deleteBooking(id: string): Promise<void> {
