@@ -168,6 +168,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_booking_by_reference: {
+        Args: { ref_number: string }
+        Returns: {
+          booking_status: Database["public"]["Enums"]["booking_status"]
+          check_in_date: string
+          check_out_date: string
+          created_at: string
+          guest_email: string
+          guest_name: string
+          guest_phone: string
+          id: string
+          payment_method: string
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          reference_number: string
+          room_id: string
+          special_requests: string
+          total_amount: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

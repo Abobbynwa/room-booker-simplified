@@ -130,30 +130,31 @@ export async function createBooking(booking: {
 }
 
 export async function fetchBookingByReference(reference: string): Promise<Booking | null> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('reference_number', reference)
-    .maybeSingle();
+  // Use secure RPC function to fetch booking by reference
+  // This bypasses RLS securely while only returning the matching booking
+  const { data, error } = await supabase.rpc('get_booking_by_reference', {
+    ref_number: reference
+  });
   
   if (error) throw error;
-  if (!data) return null;
+  if (!data || data.length === 0) return null;
   
+  const booking = data[0];
   return {
-    id: data.id,
-    reference_number: data.reference_number,
-    room_id: data.room_id,
-    guest_name: data.guest_name,
-    guest_email: data.guest_email,
-    guest_phone: data.guest_phone,
-    check_in_date: data.check_in_date,
-    check_out_date: data.check_out_date,
-    total_amount: data.total_amount,
-    booking_status: data.booking_status as BookingStatus,
-    payment_status: data.payment_status as PaymentStatus,
-    payment_method: data.payment_method,
-    special_requests: data.special_requests,
-    created_at: data.created_at,
+    id: booking.id,
+    reference_number: booking.reference_number,
+    room_id: booking.room_id,
+    guest_name: booking.guest_name,
+    guest_email: booking.guest_email,
+    guest_phone: booking.guest_phone,
+    check_in_date: booking.check_in_date,
+    check_out_date: booking.check_out_date,
+    total_amount: booking.total_amount,
+    booking_status: booking.booking_status as BookingStatus,
+    payment_status: booking.payment_status as PaymentStatus,
+    payment_method: booking.payment_method,
+    special_requests: booking.special_requests,
+    created_at: booking.created_at,
   };
 }
 
