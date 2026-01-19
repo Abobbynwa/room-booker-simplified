@@ -10,12 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { fetchAllBookings, fetchRooms, updateBookingStatus, deleteBooking, updateRoomAvailability } from '@/lib/api';
-import { Booking, BookingStatus, Room } from '@/types/hotel';
+import { fetchAllBookings, fetchRooms, updateBookingStatus, deleteBooking, updateRoomAvailability, getPaymentProofUrl } from '@/lib/api';
+import { Booking, BookingStatus, Room, RoomType } from '@/types/hotel';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut, ShieldCheck } from 'lucide-react';
+import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut, ShieldCheck, ImageIcon, ExternalLink } from 'lucide-react';
 import { UserManagement } from '@/components/UserManagement';
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
@@ -35,6 +35,11 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [roomSearch, setRoomSearch] = useState('');
+  const [roomTypeFilter, setRoomTypeFilter] = useState<RoomType | 'all'>('all');
+  const [roomAvailabilityFilter, setRoomAvailabilityFilter] = useState<'all' | 'available' | 'unavailable'>('all');
+  const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
+  const [loadingProof, setLoadingProof] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -127,6 +132,22 @@ const Admin = () => {
     }
   };
 
+  const handleViewPaymentProof = async (proofPath: string) => {
+    setLoadingProof(true);
+    try {
+      const url = await getPaymentProofUrl(proofPath);
+      setPaymentProofUrl(url);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load payment proof.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingProof(false);
+    }
+  };
+
   const filteredBookings = bookings.filter(booking => {
     const matchesSearch = 
       booking.reference_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,6 +155,18 @@ const Admin = () => {
       booking.guest_email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || booking.booking_status === statusFilter;
     return matchesSearch && matchesStatus;
+  });
+
+  const filteredRooms = rooms.filter(room => {
+    const matchesSearch = 
+      room.room_number.toLowerCase().includes(roomSearch.toLowerCase()) ||
+      room.name.toLowerCase().includes(roomSearch.toLowerCase());
+    const matchesType = roomTypeFilter === 'all' || room.type === roomTypeFilter;
+    const matchesAvailability = 
+      roomAvailabilityFilter === 'all' || 
+      (roomAvailabilityFilter === 'available' && room.is_available) ||
+      (roomAvailabilityFilter === 'unavailable' && !room.is_available);
+    return matchesSearch && matchesType && matchesAvailability;
   });
 
   const formatPrice = (price: number) => {
@@ -387,6 +420,53 @@ const Admin = () => {
                                                   <p className="text-sm text-muted-foreground">Check-out</p>
                                                   <p>{format(new Date(selectedBooking.check_out_date), 'PPP')}</p>
                                                 </div>
+                                              </div>
+                                              
+                                              {/* Payment Proof Section */}
+                                              <div className="border-t border-border pt-4">
+                                                <p className="text-sm text-muted-foreground mb-2">Payment Proof</p>
+                                                {selectedBooking.payment_proof_url ? (
+                                                  <div className="space-y-2">
+                                                    {paymentProofUrl ? (
+                                                      <a 
+                                                        href={paymentProofUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="block"
+                                                      >
+                                                        <img 
+                                                          src={paymentProofUrl} 
+                                                          alt="Payment proof" 
+                                                          className="max-w-full max-h-64 rounded-lg border border-border object-contain"
+                                                          onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                          }}
+                                                        />
+                                                        <Button variant="outline" size="sm" className="mt-2 gap-2">
+                                                          <ExternalLink className="h-4 w-4" />
+                                                          Open Full Size
+                                                        </Button>
+                                                      </a>
+                                                    ) : (
+                                                      <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleViewPaymentProof(selectedBooking.payment_proof_url!)}
+                                                        disabled={loadingProof}
+                                                        className="gap-2"
+                                                      >
+                                                        {loadingProof ? (
+                                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                          <ImageIcon className="h-4 w-4" />
+                                                        )}
+                                                        View Payment Proof
+                                                      </Button>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <p className="text-sm text-muted-foreground italic">No payment proof uploaded</p>
+                                                )}
                                               </div>
                                             </div>
                                           )}

@@ -125,6 +125,7 @@ export async function createBooking(booking: {
     payment_status: data.payment_status as PaymentStatus,
     payment_method: data.payment_method,
     special_requests: data.special_requests,
+    payment_proof_url: data.payment_proof_url || null,
     created_at: data.created_at,
   };
 }
@@ -154,6 +155,7 @@ export async function fetchBookingByReference(reference: string): Promise<Bookin
     payment_status: booking.payment_status as PaymentStatus,
     payment_method: booking.payment_method,
     special_requests: booking.special_requests,
+    payment_proof_url: (booking as any).payment_proof_url || null,
     created_at: booking.created_at,
   };
 }
@@ -180,6 +182,7 @@ export async function fetchAllBookings(): Promise<Booking[]> {
     payment_status: b.payment_status as PaymentStatus,
     payment_method: b.payment_method,
     special_requests: b.special_requests,
+    payment_proof_url: b.payment_proof_url || null,
     created_at: b.created_at,
   }));
 }
@@ -240,4 +243,40 @@ export async function deleteBooking(id: string): Promise<void> {
     .eq('id', id);
   
   if (error) throw error;
+}
+
+// Upload payment proof
+export async function uploadPaymentProof(referenceNumber: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${referenceNumber}-${Date.now()}.${fileExt}`;
+  const filePath = `${referenceNumber}/${fileName}`;
+  
+  // Upload file to storage
+  const { error: uploadError } = await supabase.storage
+    .from('payment-proofs')
+    .upload(filePath, file);
+  
+  if (uploadError) throw uploadError;
+  
+  // Get the public URL (even though bucket is private, we store the path)
+  const proofUrl = filePath;
+  
+  // Update booking with payment proof URL using RPC
+  const { error: updateError } = await supabase.rpc('update_booking_payment_proof', {
+    ref_number: referenceNumber,
+    proof_url: proofUrl,
+  });
+  
+  if (updateError) throw updateError;
+  
+  return proofUrl;
+}
+
+// Get payment proof URL for admin viewing
+export async function getPaymentProofUrl(filePath: string): Promise<string | null> {
+  const { data } = await supabase.storage
+    .from('payment-proofs')
+    .createSignedUrl(filePath, 3600); // 1 hour expiry
+  
+  return data?.signedUrl || null;
 }

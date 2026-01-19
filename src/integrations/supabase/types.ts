@@ -46,6 +46,7 @@ export type Database = {
           guest_phone: string
           id: string
           payment_method: string | null
+          payment_proof_url: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           reference_number: string
           room_id: string
@@ -63,6 +64,7 @@ export type Database = {
           guest_phone: string
           id?: string
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           reference_number: string
           room_id: string
@@ -80,6 +82,7 @@ export type Database = {
           guest_phone?: string
           id?: string
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           reference_number?: string
           room_id?: string
@@ -180,6 +183,7 @@ export type Database = {
           guest_phone: string
           id: string
           payment_method: string
+          payment_proof_url: string
           payment_status: Database["public"]["Enums"]["payment_status"]
           reference_number: string
           room_id: string
@@ -192,6 +196,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      update_booking_payment_proof: {
+        Args: { proof_url: string; ref_number: string }
         Returns: boolean
       }
     }

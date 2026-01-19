@@ -33,6 +33,7 @@ export interface Booking {
   payment_status: PaymentStatus;
   payment_method: string | null;
   special_requests: string | null;
+  payment_proof_url: string | null;
   created_at: string;
 }
 
