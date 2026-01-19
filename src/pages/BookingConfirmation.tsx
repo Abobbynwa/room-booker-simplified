@@ -1,21 +1,26 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchBookingByReference, fetchRoomById, paymentDetails, contactInfo } from '@/lib/api';
+import { fetchBookingByReference, fetchRoomById, paymentDetails, contactInfo, uploadPaymentProof } from '@/lib/api';
 import { Booking, Room } from '@/types/hotel';
-import { CheckCircle, Copy, Check, MessageCircle } from 'lucide-react';
+import { CheckCircle, Copy, Check, MessageCircle, Upload, Loader2, ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const BookingConfirmation = () => {
   const { reference } = useParams();
+  const { toast } = useToast();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [proofUploaded, setProofUploaded] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!reference) {
@@ -27,6 +32,7 @@ const BookingConfirmation = () => {
       .then(async (bookingData) => {
         setBooking(bookingData);
         if (bookingData) {
+          setProofUploaded(!!bookingData.payment_proof_url);
           const roomData = await fetchRoomById(bookingData.room_id);
           setRoom(roomData);
         }
@@ -40,6 +46,51 @@ const BookingConfirmation = () => {
       await navigator.clipboard.writeText(reference);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !reference) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload an image (JPEG, PNG, GIF, WebP) or PDF file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File Too Large',
+        description: 'Please upload a file smaller than 5MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await uploadPaymentProof(reference, file);
+      setProofUploaded(true);
+      toast({
+        title: 'Proof Uploaded!',
+        description: 'Your payment proof has been uploaded successfully. We will verify it shortly.',
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'Failed to upload payment proof. Please try again or send via WhatsApp.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -172,16 +223,54 @@ const BookingConfirmation = () => {
                 </div>
 
                 <div className="bg-accent/30 rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">2. Send Payment Proof</h4>
+                  <h4 className="font-semibold mb-2">2. Upload Payment Proof</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Send your payment receipt via WhatsApp with your reference number.
+                    Upload a screenshot or photo of your payment receipt.
                   </p>
+                  
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/*,.pdf"
+                    className="hidden"
+                  />
+                  
+                  {proofUploaded ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <Check className="h-5 w-5 text-green-500" />
+                      <span className="text-green-700 dark:text-green-400 font-medium">Payment proof uploaded successfully!</span>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-full bg-gold hover:bg-gold-dark text-primary-foreground"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Payment Proof
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-muted-foreground">Or send via WhatsApp:</span>
+                  </div>
                   <a
                     href={`https://wa.me/${contactInfo.whatsapp.replace(/\+/g, '')}?text=${whatsappMessage}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="block mt-2"
                   >
-                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                    <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Send on WhatsApp
                     </Button>
