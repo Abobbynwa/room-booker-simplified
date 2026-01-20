@@ -191,6 +191,10 @@ export type Database = {
           total_amount: number
         }[]
       }
+      grant_admin_role_by_email: {
+        Args: { user_email: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
