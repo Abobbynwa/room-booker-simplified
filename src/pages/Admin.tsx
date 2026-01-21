@@ -82,10 +82,35 @@ const Admin = () => {
         } : undefined
       );
       await refreshData();
+      
       toast({
         title: 'Status Updated',
         description: `Booking is now ${statusConfig[newStatus].label}.`,
       });
+
+      // Simulate email/SMS notification for confirmed or cancelled bookings
+      if (booking && (newStatus === 'confirmed' || newStatus === 'cancelled')) {
+        const notificationType = newStatus === 'confirmed' ? '✅ Confirmation' : '❌ Cancellation';
+        const emailMessage = newStatus === 'confirmed' 
+          ? `Your booking (${booking.reference_number}) has been confirmed! Check-in: ${format(new Date(booking.check_in_date), 'MMM d, yyyy')}`
+          : `Your booking (${booking.reference_number}) has been cancelled. We hope to see you again soon.`;
+        
+        // Simulate email notification
+        setTimeout(() => {
+          toast({
+            title: `📧 Email Sent - ${notificationType}`,
+            description: `To: ${booking.guest_email}\n${emailMessage}`,
+          });
+        }, 500);
+
+        // Simulate SMS notification
+        setTimeout(() => {
+          toast({
+            title: `📱 SMS Sent - ${notificationType}`,
+            description: `To: ${booking.guest_phone}\n${emailMessage}`,
+          });
+        }, 1000);
+      }
     } catch (error) {
       toast({
         title: 'Error',
