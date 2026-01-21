@@ -15,8 +15,7 @@ import { Booking, BookingStatus, Room, RoomType } from '@/types/hotel';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut, ShieldCheck, ImageIcon, ExternalLink } from 'lucide-react';
-import { UserManagement } from '@/components/UserManagement';
+import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut, ImageIcon, ExternalLink } from 'lucide-react';
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   pending: { label: 'Pending', color: 'bg-yellow-500' },
@@ -85,7 +84,7 @@ const Admin = () => {
       await refreshData();
       toast({
         title: 'Status Updated',
-        description: `Booking is now ${statusConfig[newStatus].label}. Notification sent to guest.`,
+        description: `Booking is now ${statusConfig[newStatus].label}.`,
       });
     } catch (error) {
       toast({
@@ -281,10 +280,6 @@ const Admin = () => {
               <TabsList className="mb-6">
                 <TabsTrigger value="bookings">Bookings</TabsTrigger>
                 <TabsTrigger value="rooms">Rooms</TabsTrigger>
-                <TabsTrigger value="users" className="gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  Users
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="bookings">
@@ -375,7 +370,14 @@ const Admin = () => {
                                     <div className="flex gap-2">
                                       <Dialog>
                                         <DialogTrigger asChild>
-                                          <Button variant="ghost" size="icon" onClick={() => setSelectedBooking(booking)}>
+                                          <Button variant="ghost" size="icon" onClick={() => {
+                                            setSelectedBooking(booking);
+                                            if (booking.payment_proof_url) {
+                                              handleViewPaymentProof(booking.payment_proof_url);
+                                            } else {
+                                              setPaymentProofUrl(null);
+                                            }
+                                          }}>
                                             <Eye className="h-4 w-4" />
                                           </Button>
                                         </DialogTrigger>
@@ -398,19 +400,19 @@ const Admin = () => {
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Guest Name</p>
-                                                  <p className="font-medium">{selectedBooking.guest_name}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Email</p>
-                                                  <p>{selectedBooking.guest_email}</p>
+                                                  <p>{selectedBooking.guest_name}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Phone</p>
                                                   <p>{selectedBooking.guest_phone}</p>
                                                 </div>
                                                 <div>
-                                                  <p className="text-sm text-muted-foreground">Amount</p>
-                                                  <p className="font-bold text-gold">{formatPrice(selectedBooking.total_amount)}</p>
+                                                  <p className="text-sm text-muted-foreground">Email</p>
+                                                  <p>{selectedBooking.guest_email}</p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                                                  <p className="font-semibold text-gold">{formatPrice(selectedBooking.total_amount)}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-sm text-muted-foreground">Check-in</p>
@@ -421,64 +423,52 @@ const Admin = () => {
                                                   <p>{format(new Date(selectedBooking.check_out_date), 'PPP')}</p>
                                                 </div>
                                               </div>
-                                              
-                                              {/* Payment Proof Section */}
-                                              <div className="border-t border-border pt-4">
-                                                <p className="text-sm text-muted-foreground mb-2">Payment Proof</p>
-                                                {selectedBooking.payment_proof_url ? (
-                                                  <div className="space-y-2">
-                                                    {paymentProofUrl ? (
-                                                      <a 
-                                                        href={paymentProofUrl} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer"
-                                                        className="block"
-                                                      >
-                                                        <img 
-                                                          src={paymentProofUrl} 
-                                                          alt="Payment proof" 
-                                                          className="max-w-full max-h-64 rounded-lg border border-border object-contain"
-                                                          onError={(e) => {
-                                                            (e.target as HTMLImageElement).style.display = 'none';
-                                                          }}
-                                                        />
-                                                        <Button variant="outline" size="sm" className="mt-2 gap-2">
+                                              {selectedBooking.special_requests && (
+                                                <div>
+                                                  <p className="text-sm text-muted-foreground">Special Requests</p>
+                                                  <p className="text-sm">{selectedBooking.special_requests}</p>
+                                                </div>
+                                              )}
+                                              {selectedBooking.payment_proof_url && (
+                                                <div>
+                                                  <p className="text-sm text-muted-foreground mb-2">Payment Proof</p>
+                                                  {loadingProof ? (
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                                      Loading...
+                                                    </div>
+                                                  ) : paymentProofUrl ? (
+                                                    <div className="space-y-2">
+                                                      <img 
+                                                        src={paymentProofUrl} 
+                                                        alt="Payment proof" 
+                                                        className="max-w-full max-h-64 rounded-lg border"
+                                                      />
+                                                      <Button variant="outline" size="sm" asChild>
+                                                        <a href={paymentProofUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
                                                           <ExternalLink className="h-4 w-4" />
                                                           Open Full Size
-                                                        </Button>
-                                                      </a>
-                                                    ) : (
-                                                      <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleViewPaymentProof(selectedBooking.payment_proof_url!)}
-                                                        disabled={loadingProof}
-                                                        className="gap-2"
-                                                      >
-                                                        {loadingProof ? (
-                                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                          <ImageIcon className="h-4 w-4" />
-                                                        )}
-                                                        View Payment Proof
+                                                        </a>
                                                       </Button>
-                                                    )}
-                                                  </div>
-                                                ) : (
-                                                  <p className="text-sm text-muted-foreground italic">No payment proof uploaded</p>
-                                                )}
-                                              </div>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                      <ImageIcon className="h-4 w-4" />
+                                                      Unable to load image
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
                                             </div>
                                           )}
                                         </DialogContent>
                                       </Dialog>
-                                      <Button
-                                        variant="ghost"
+                                      <Button 
+                                        variant="ghost" 
                                         size="icon"
                                         onClick={() => handleDeleteBooking(booking.id)}
-                                        className="text-destructive hover:text-destructive"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="h-4 w-4 text-destructive" />
                                       </Button>
                                     </div>
                                   </TableCell>
@@ -489,8 +479,9 @@ const Admin = () => {
                         </Table>
                       </div>
                     ) : (
-                      <div className="text-center py-12">
-                        <p className="text-muted-foreground">No bookings found.</p>
+                      <div className="text-center py-12 text-muted-foreground">
+                        <CalendarCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No bookings found</p>
                       </div>
                     )}
                   </CardContent>
@@ -500,7 +491,43 @@ const Admin = () => {
               <TabsContent value="rooms">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="font-serif">Room Management</CardTitle>
+                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                      <CardTitle className="font-serif">All Rooms ({rooms.length})</CardTitle>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search rooms..."
+                            value={roomSearch}
+                            onChange={(e) => setRoomSearch(e.target.value)}
+                            className="pl-9 w-full sm:w-64"
+                          />
+                        </div>
+                        <Select value={roomTypeFilter} onValueChange={(v) => setRoomTypeFilter(v as RoomType | 'all')}>
+                          <SelectTrigger className="w-full sm:w-40">
+                            <SelectValue placeholder="Room type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="standard">Standard</SelectItem>
+                            <SelectItem value="deluxe">Deluxe</SelectItem>
+                            <SelectItem value="executive">Executive</SelectItem>
+                            <SelectItem value="suite">Suite</SelectItem>
+                            <SelectItem value="presidential">Presidential</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={roomAvailabilityFilter} onValueChange={(v) => setRoomAvailabilityFilter(v as 'all' | 'available' | 'unavailable')}>
+                          <SelectTrigger className="w-full sm:w-40">
+                            <SelectValue placeholder="Availability" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="unavailable">Unavailable</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
@@ -510,49 +537,40 @@ const Admin = () => {
                             <TableHead>Room</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Price/Night</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Action</TableHead>
+                            <TableHead>Availability</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {rooms.slice(0, 50).map(room => {
-                            const typeLabel = room.type.charAt(0).toUpperCase() + room.type.slice(1);
-                            return (
-                              <TableRow key={room.id}>
-                                <TableCell className="font-medium">{room.room_number}</TableCell>
-                                <TableCell>{typeLabel}</TableCell>
-                                <TableCell>{formatPrice(room.price_per_night)}</TableCell>
-                                <TableCell>
-                                  <Badge variant={room.is_available ? 'default' : 'destructive'}>
-                                    {room.is_available ? 'Available' : 'Unavailable'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRoomAvailability(room.id, !room.is_available)}
-                                  >
-                                    {room.is_available ? 'Mark Unavailable' : 'Mark Available'}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
+                          {filteredRooms.slice(0, 50).map(room => (
+                            <TableRow key={room.id}>
+                              <TableCell className="font-medium">Room {room.room_number}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {room.type.charAt(0).toUpperCase() + room.type.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{formatPrice(room.price_per_night)}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant={room.is_available ? 'default' : 'destructive'}
+                                  size="sm"
+                                  onClick={() => handleRoomAvailability(room.id, !room.is_available)}
+                                >
+                                  {room.is_available ? 'Available' : 'Unavailable'}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
                         </TableBody>
                       </Table>
+                      {filteredRooms.length > 50 && (
+                        <p className="text-sm text-muted-foreground text-center mt-4">
+                          Showing 50 of {filteredRooms.length} rooms. Use filters to narrow down.
+                        </p>
+                      )}
                     </div>
-                    {rooms.length > 50 && (
-                      <p className="text-sm text-muted-foreground mt-4 text-center">
-                        Showing first 50 rooms. Use filters to find specific rooms.
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              <TabsContent value="users">
-                <UserManagement />
               </TabsContent>
             </Tabs>
           </div>
