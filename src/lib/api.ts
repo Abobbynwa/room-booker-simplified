@@ -1,84 +1,39 @@
-import { supabase } from '@/integrations/supabase/client';
-import { Room, Booking, RoomType, BookingStatus, PaymentStatus } from '@/types/hotel';
+// Frontend-only API using localStorage
+import { Room, Booking, BookingStatus, PaymentStatus } from '@/types/hotel';
+import {
+  getRooms,
+  getRoomById,
+  updateRoomAvailability as updateRoom,
+  getBookings,
+  getBookingByReference,
+  createBooking as createNewBooking,
+  updateBookingStatus as updateStatus,
+  deleteBooking as removeBooking,
+  savePaymentProof,
+  getPaymentProof,
+  paymentDetails as payments,
+  contactInfo as contact,
+} from './mockData';
 
-// Payment details (static)
-export const paymentDetails = [
-  {
-    bankName: 'OPay',
-    accountName: 'AGABA VALENTINE',
-    accountNumber: '+2348149642220',
-  },
-  {
-    bankName: 'Moniepoint',
-    accountName: 'AGABA VALENTINE',
-    accountNumber: '1958811611',
-  },
-  {
-    bankName: 'Access Bank',
-    accountName: 'AGABA VALENTINE',
-    accountNumber: '1958811611',
-  },
-];
-
-export const contactInfo = {
-  email: 'abobbynwa@proton.me',
-  whatsapp: '+234814964220',
-};
+// Re-export static data
+export const paymentDetails = payments;
+export const contactInfo = contact;
 
 // Room API
 export async function fetchRooms(): Promise<Room[]> {
-  const { data, error } = await supabase
-    .from('rooms')
-    .select('*')
-    .order('room_number');
-  
-  if (error) throw error;
-  
-  return (data || []).map(room => ({
-    id: room.id,
-    room_number: room.room_number,
-    type: room.type as RoomType,
-    name: room.name,
-    description: room.description,
-    price_per_night: room.price_per_night,
-    capacity: room.capacity,
-    features: room.features || [],
-    image_url: room.image_url,
-    is_available: room.is_available,
-  }));
+  // Simulate async behavior
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return getRooms();
 }
 
 export async function fetchRoomById(id: string): Promise<Room | null> {
-  const { data, error } = await supabase
-    .from('rooms')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
-  
-  if (error) throw error;
-  if (!data) return null;
-  
-  return {
-    id: data.id,
-    room_number: data.room_number,
-    type: data.type as RoomType,
-    name: data.name,
-    description: data.description,
-    price_per_night: data.price_per_night,
-    capacity: data.capacity,
-    features: data.features || [],
-    image_url: data.image_url,
-    is_available: data.is_available,
-  };
+  await new Promise(resolve => setTimeout(resolve, 50));
+  return getRoomById(id);
 }
 
 export async function updateRoomAvailability(id: string, isAvailable: boolean): Promise<void> {
-  const { error } = await supabase
-    .from('rooms')
-    .update({ is_available: isAvailable })
-    .eq('id', id);
-  
-  if (error) throw error;
+  await new Promise(resolve => setTimeout(resolve, 50));
+  updateRoom(id, isAvailable);
 }
 
 // Booking API
@@ -93,105 +48,25 @@ export async function createBooking(booking: {
   payment_method?: string;
   special_requests?: string;
 }): Promise<Booking> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert([{
-      room_id: booking.room_id,
-      guest_name: booking.guest_name,
-      guest_email: booking.guest_email,
-      guest_phone: booking.guest_phone,
-      check_in_date: booking.check_in_date,
-      check_out_date: booking.check_out_date,
-      total_amount: booking.total_amount,
-      payment_method: booking.payment_method || null,
-      special_requests: booking.special_requests || null,
-    }] as any)
-    .select()
-    .single();
-  
-  if (error) throw error;
-  
-  return {
-    id: data.id,
-    reference_number: data.reference_number,
-    room_id: data.room_id,
-    guest_name: data.guest_name,
-    guest_email: data.guest_email,
-    guest_phone: data.guest_phone,
-    check_in_date: data.check_in_date,
-    check_out_date: data.check_out_date,
-    total_amount: data.total_amount,
-    booking_status: data.booking_status as BookingStatus,
-    payment_status: data.payment_status as PaymentStatus,
-    payment_method: data.payment_method,
-    special_requests: data.special_requests,
-    payment_proof_url: data.payment_proof_url || null,
-    created_at: data.created_at,
-  };
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return createNewBooking(booking);
 }
 
 export async function fetchBookingByReference(reference: string): Promise<Booking | null> {
-  // Use secure RPC function to fetch booking by reference
-  // This bypasses RLS securely while only returning the matching booking
-  const { data, error } = await supabase.rpc('get_booking_by_reference', {
-    ref_number: reference
-  });
-  
-  if (error) throw error;
-  if (!data || data.length === 0) return null;
-  
-  const booking = data[0];
-  return {
-    id: booking.id,
-    reference_number: booking.reference_number,
-    room_id: booking.room_id,
-    guest_name: booking.guest_name,
-    guest_email: booking.guest_email,
-    guest_phone: booking.guest_phone,
-    check_in_date: booking.check_in_date,
-    check_out_date: booking.check_out_date,
-    total_amount: booking.total_amount,
-    booking_status: booking.booking_status as BookingStatus,
-    payment_status: booking.payment_status as PaymentStatus,
-    payment_method: booking.payment_method,
-    special_requests: booking.special_requests,
-    payment_proof_url: (booking as any).payment_proof_url || null,
-    created_at: booking.created_at,
-  };
+  await new Promise(resolve => setTimeout(resolve, 50));
+  return getBookingByReference(reference);
 }
 
 export async function fetchAllBookings(): Promise<Booking[]> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (error) throw error;
-  
-  return (data || []).map(b => ({
-    id: b.id,
-    reference_number: b.reference_number,
-    room_id: b.room_id,
-    guest_name: b.guest_name,
-    guest_email: b.guest_email,
-    guest_phone: b.guest_phone,
-    check_in_date: b.check_in_date,
-    check_out_date: b.check_out_date,
-    total_amount: b.total_amount,
-    booking_status: b.booking_status as BookingStatus,
-    payment_status: b.payment_status as PaymentStatus,
-    payment_method: b.payment_method,
-    special_requests: b.special_requests,
-    payment_proof_url: b.payment_proof_url || null,
-    created_at: b.created_at,
-  }));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return getBookings();
 }
 
 export async function updateBookingStatus(
-  id: string, 
+  id: string,
   bookingStatus: BookingStatus,
   paymentStatus?: PaymentStatus,
-  bookingDetails?: {
+  _bookingDetails?: {
     guest_name: string;
     guest_email: string;
     reference_number: string;
@@ -201,82 +76,22 @@ export async function updateBookingStatus(
     total_amount: number;
   }
 ): Promise<void> {
-  const updates: Record<string, unknown> = { booking_status: bookingStatus };
-  if (paymentStatus) {
-    updates.payment_status = paymentStatus;
-  }
-  
-  const { error } = await supabase
-    .from('bookings')
-    .update(updates)
-    .eq('id', id);
-  
-  if (error) throw error;
-
-  // Send email notification if booking details are provided
-  if (bookingDetails) {
-    try {
-      await supabase.functions.invoke('send-booking-notification', {
-        body: {
-          guest_name: bookingDetails.guest_name,
-          guest_email: bookingDetails.guest_email,
-          reference_number: bookingDetails.reference_number,
-          booking_status: bookingStatus,
-          payment_status: paymentStatus || 'pending',
-          check_in_date: bookingDetails.check_in_date,
-          check_out_date: bookingDetails.check_out_date,
-          room_name: bookingDetails.room_name,
-          total_amount: bookingDetails.total_amount,
-        },
-      });
-    } catch (notificationError) {
-      // Log error but don't fail the status update
-      console.error('Failed to send booking notification:', notificationError);
-    }
-  }
+  await new Promise(resolve => setTimeout(resolve, 50));
+  updateStatus(id, bookingStatus, paymentStatus);
 }
 
 export async function deleteBooking(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('bookings')
-    .delete()
-    .eq('id', id);
-  
-  if (error) throw error;
+  await new Promise(resolve => setTimeout(resolve, 50));
+  removeBooking(id);
 }
 
 // Upload payment proof
 export async function uploadPaymentProof(referenceNumber: string, file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${referenceNumber}-${Date.now()}.${fileExt}`;
-  const filePath = `${referenceNumber}/${fileName}`;
-  
-  // Upload file to storage
-  const { error: uploadError } = await supabase.storage
-    .from('payment-proofs')
-    .upload(filePath, file);
-  
-  if (uploadError) throw uploadError;
-  
-  // Get the public URL (even though bucket is private, we store the path)
-  const proofUrl = filePath;
-  
-  // Update booking with payment proof URL using RPC
-  const { error: updateError } = await supabase.rpc('update_booking_payment_proof', {
-    ref_number: referenceNumber,
-    proof_url: proofUrl,
-  });
-  
-  if (updateError) throw updateError;
-  
-  return proofUrl;
+  return savePaymentProof(referenceNumber, file);
 }
 
 // Get payment proof URL for admin viewing
 export async function getPaymentProofUrl(filePath: string): Promise<string | null> {
-  const { data } = await supabase.storage
-    .from('payment-proofs')
-    .createSignedUrl(filePath, 3600); // 1 hour expiry
-  
-  return data?.signedUrl || null;
+  await new Promise(resolve => setTimeout(resolve, 50));
+  return getPaymentProof(filePath);
 }
