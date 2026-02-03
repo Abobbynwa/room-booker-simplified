@@ -1,0 +1,32 @@
+from fastapi import APIRouter, Depends, HTTPException, Header
+from sqlmodel import Session, select
+from app.db_core import get_session, engine, init_db
+from app.models import AdminUser, Booking, ContactMessage
+from app.schemas import AdminLogin
+from app.utils.security import verify_password, create_access_token, decode_access_token
+
+router = APIRouter(prefix="/api/admin", tags=["Admin"])
+
+@router.post("/login")
+def admin_login(credentials: AdminLogin, session: Session = Depends(get_session)):
+    admin = session.exec(select(AdminUser).where(AdminUser.email == credentials.email)).first()
+    if not admin or not verify_password(credentials.password, admin.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token({"sub": admin.email})
+    return {"access_token": token, "token_type": "bearer"}
+
+def get_current_admin(authorization: str = Header(...)):
+    try:
+        token = authorization.split(" ")[1]
+        decoded = decode_access_token(token)
+        return decoded["sub"]
+    except:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+@router.get("/bookings")
+def get_bookings(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    return session.exec(select(Booking)).all()
+
+@router.get("/messages")
+def get_messages(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    return session.exec(select(ContactMessage)).all()
