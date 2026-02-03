@@ -1,10 +1,51 @@
+import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { contactInfo } from '@/lib/api';
+import { submitContact } from '@/lib/backend-api';
 import { Mail, Phone, MessageCircle, MapPin } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Contact = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.message) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await submitContact(formData);
+      toast({
+        title: 'Message Sent!',
+        description: 'We will get back to you shortly.',
+      });
+      setFormData({ name: '', email: '', message: '' });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to send message';
+      toast({
+        title: 'Error',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -83,8 +124,55 @@ const Contact = () => {
               </Card>
             </div>
 
-            <div className="max-w-2xl mx-auto mt-16 text-center">
-              <h2 className="text-2xl font-serif font-bold mb-4">Payment Inquiries</h2>
+            <div className="max-w-2xl mx-auto mt-16">
+              <h2 className="text-2xl font-serif font-bold mb-8 text-center">Send us a Message</h2>
+              <Card>
+                <CardContent className="pt-8">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <Label htmlFor="name">Your Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="John Doe"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="john@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="message">Message</Label>
+                      <textarea
+                        id="message"
+                        placeholder="Your message here..."
+                        rows={5}
+                        className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-50"
+                        value={formData.message}
+                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-gold hover:bg-gold/90"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Sending...' : 'Send Message'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
               <p className="text-muted-foreground mb-6">
                 For payment confirmations and booking-related inquiries, please contact us via WhatsApp with your booking reference number. We typically respond within 30 minutes during business hours.
               </p>

@@ -10,7 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format, differenceInDays } from 'date-fns';
 import { CalendarIcon, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { paymentDetails, createBooking } from '@/lib/api';
+import { paymentDetails } from '@/lib/api';
+import { submitBooking } from '@/lib/backend-api';
 import { useToast } from '@/hooks/use-toast';
 
 interface BookingFormProps {
@@ -69,26 +70,33 @@ export function BookingForm({ room }: BookingFormProps) {
     setIsSubmitting(true);
 
     try {
-      const booking = await createBooking({
-        room_id: room.id,
-        guest_name: guestName,
-        guest_email: guestEmail,
-        guest_phone: guestPhone,
-        check_in_date: format(checkIn, 'yyyy-MM-dd'),
-        check_out_date: format(checkOut, 'yyyy-MM-dd'),
-        total_amount: totalAmount,
+      // Submit to backend FastAPI
+      await submitBooking({
+        name: guestName,
+        email: guestEmail,
+        room_type: room.type,
+        check_in: format(checkIn, 'yyyy-MM-dd'),
+        check_out: format(checkOut, 'yyyy-MM-dd'),
       });
 
       toast({
-        title: 'Booking Created!',
-        description: `Your reference number is ${booking.reference_number}. Please complete payment to confirm.`,
+        title: 'Booking Submitted!',
+        description: 'Your booking has been successfully submitted. Check your email for confirmation.',
       });
 
-      navigate(`/booking-confirmation/${booking.reference_number}`);
+      // Clear form and navigate
+      setGuestName('');
+      setGuestEmail('');
+      setGuestPhone('');
+      setCheckIn(undefined);
+      setCheckOut(undefined);
+      
+      navigate('/booking-confirmation');
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       toast({
         title: 'Booking Failed',
-        description: 'Unable to create booking. Please try again.',
+        description: errorMsg || 'Unable to submit booking. Please try again.',
         variant: 'destructive',
       });
     } finally {
