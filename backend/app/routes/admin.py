@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from app.db_core import get_session, engine, init_db
 from app.models import AdminUser, Booking, ContactMessage
 from app.schemas import AdminLogin
-from app.utils.security import verify_password, create_access_token, decode_access_token
+from app.utils.security import verify_password, create_access_token, decode_access_token, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -22,6 +22,24 @@ def get_current_admin(authorization: str = Header(...)):
         return decoded["sub"]
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+@router.post("/init")
+def init_admin(credentials: AdminLogin, session: Session = Depends(get_session)):
+    """Create the first admin user only if no admins exist.
+
+    This endpoint is intentionally one-time: it will fail with 403
+    once any `AdminUser` exists in the database.
+    """
+    existing_any = session.exec(select(AdminUser)).first()
+    if existing_any:
+        raise HTTPException(status_code=403, detail="Admin already initialized")
+
+    hashed_pw = hash_password(credentials.password)
+    new_admin = AdminUser(email=credentials.email, password_hash=hashed_pw)
+    session.add(new_admin)
+    session.commit()
+    session.refresh(new_admin)
+    return {"message": f"Admin created for {new_admin.email}"}
 
 @router.get("/bookings")
 def get_bookings(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
