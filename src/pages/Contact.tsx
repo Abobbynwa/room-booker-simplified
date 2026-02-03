@@ -172,19 +172,20 @@ const Contact = () => {
                   </form>
                 </CardContent>
               </Card>
-            </div>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-muted-foreground mt-8 text-center text-sm">
                 For payment confirmations and booking-related inquiries, please contact us via WhatsApp with your booking reference number. We typically respond within 30 minutes during business hours.
               </p>
-              <a
-                href={`https://wa.me/${contactInfo.whatsapp.replace(/\+/g, '')}?text=${encodeURIComponent('Hello! I have a question about my booking.')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
-              >
-                <MessageCircle className="h-5 w-5" />
-                Chat on WhatsApp
-              </a>
+              <div className="flex justify-center mt-4">
+                <a
+                  href={`https://wa.me/${contactInfo.whatsapp.replace(/\+/g, '')}?text=${encodeURIComponent('Hello! I have a question about my booking.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  Chat on WhatsApp
+                </a>
+              </div>
             </div>
           </div>
         </section>
