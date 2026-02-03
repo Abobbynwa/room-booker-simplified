@@ -6,6 +6,53 @@
 
 ## How can I edit this code?
 
+## Backend: create admin
+
+There are two ways to create an initial admin user for the backend.
+
+1) CLI (recommended for local dev)
+
+- Activate the backend virtual environment and run the `create_admin.py` script:
+
+```bash
+cd backend
+source venv/bin/activate
+python create_admin.py --email admin@example.com --password S3cr3t
+```
+
+- Or run interactively:
+
+```bash
+cd backend
+source venv/bin/activate
+python create_admin.py --email admin@example.com
+# you will be prompted for a password and confirmation
+```
+
+2) One-time API endpoint
+
+- The backend exposes a one-time initialization endpoint that allows creating the first admin:
+
+  - POST `/api/admin/init` with JSON body:
+
+    ```json
+    {"email":"admin@example.com", "password":"S3cr3t"}
+    ```
+
+  - The endpoint will return `403` once any admin exists in the database.
+
+- Start the backend and call the endpoint (e.g., using `curl`):
+
+```bash
+curl -X POST http://localhost:8000/api/admin/init \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"S3cr3t"}'
+```
+
+Note: By default the app will attempt to use `DATABASE_URL` from `backend/.env`. If Postgres is unreachable or misconfigured the app will fall back to a local SQLite file `backend/roomdb.sqlite` for development.
+
+## How can I edit this code?
+
 There are several ways of editing your application.
 
 **Use Lovable**
