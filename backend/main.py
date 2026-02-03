@@ -3,7 +3,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import init_db
+from app.db_core import init_db
 from app.routes import contact, booking, admin
 
 app = FastAPI(title="Room Booker API")
