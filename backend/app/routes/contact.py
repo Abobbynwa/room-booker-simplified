@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
-from app.db_core import get_session
-from app.models import ContactMessage
-from app.schemas import ContactCreate
+from ..db_core import get_session
+from ..models import ContactMessage
+from ..schemas import ContactCreate
 
 router = APIRouter(prefix="/api/contact", tags=["Contact"])
 

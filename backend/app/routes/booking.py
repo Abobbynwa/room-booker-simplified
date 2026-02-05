@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
-from app.db_core import get_session
-from app.models import Booking
-from app.schemas import BookingCreate
+from ..db_core import get_session
+from ..models import Booking
+from ..schemas import BookingCreate
 
 router = APIRouter(prefix="/api/booking", tags=["Booking"])
 
