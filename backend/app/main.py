@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import init_db
+from .db_core import init_db
 from .routes import contact, booking, admin
 
 app = FastAPI(title="Room Booker API")
