@@ -39,11 +39,6 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link to="/admin">
-              <Button variant="outline" size="sm" className="border-gold text-gold hover:bg-gold hover:text-primary-foreground">
-                Admin
-              </Button>
-            </Link>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -70,11 +65,6 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
-              <Button variant="outline" size="sm" className="mt-4 border-gold text-gold hover:bg-gold hover:text-primary-foreground">
-                Admin
-              </Button>
-            </Link>
           </nav>
         )}
       </div>
