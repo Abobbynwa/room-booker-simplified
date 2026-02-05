@@ -1,12 +1,7 @@
-
-
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import init_db
-from app.routes import contact, booking, admin
+from .database import init_db
+from .routes import contact, booking, admin
 
 app = FastAPI(title="Room Booker API")
 
@@ -27,4 +22,3 @@ def on_startup():
 app.include_router(contact.router)
 app.include_router(booking.router)
 app.include_router(admin.router)
-
