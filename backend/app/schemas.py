@@ -59,3 +59,23 @@ class BookingStatusUpdate(BaseModel):
 
 class PaymentProofUpdate(BaseModel):
     payment_proof: str
+
+class StaffCreate(BaseModel):
+    name: str
+    email: str
+    phone: str
+    role: str
+    address: str | None = None
+    shift: str | None = None
+    account_details: str | None = None
+    status: str = "active"
+
+class StaffUpdate(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    role: str | None = None
+    address: str | None = None
+    shift: str | None = None
+    account_details: str | None = None
+    status: str | None = None

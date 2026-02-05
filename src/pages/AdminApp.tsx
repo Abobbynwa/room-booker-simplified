@@ -22,8 +22,15 @@ import {
   deletePaymentAccount,
   updateBookingStatus,
   updatePaymentProof,
+  fetchStaff,
+  createStaff,
+  updateStaff,
+  deleteStaff,
+  fetchReportSummary,
 } from "@/lib/backend-api";
 import { Loader2, LogOut, RefreshCcw, Plus } from "lucide-react";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 type Room = {
   id: number;
@@ -58,6 +65,18 @@ type PaymentAccount = {
   instructions?: string | null;
 };
 
+type Staff = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  address?: string | null;
+  shift?: string | null;
+  account_details?: string | null;
+  status: string;
+};
+
 const AdminApp = () => {
   const { toast } = useToast();
   const { token, user, signOut } = useAuth();
@@ -69,6 +88,8 @@ const AdminApp = () => {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [report, setReport] = useState<any>(null);
 
   const [roomForm, setRoomForm] = useState({
     name: "",
@@ -87,6 +108,19 @@ const AdminApp = () => {
     account_number: "",
     instructions: "",
   });
+
+  const [staffForm, setStaffForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "Manager",
+    address: "",
+    shift: "",
+    account_details: "",
+    status: "active",
+  });
+
+  const [staff, setStaff] = useState<Staff[]>([]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -144,6 +178,37 @@ const AdminApp = () => {
     }
   };
 
+  const loadStaff = async () => {
+    if (!token) return;
+    setLoadingStaff(true);
+    try {
+      const data = await fetchStaff(token);
+      setStaff(data as Staff[]);
+    } catch (error) {
+      toast({
+        title: "Failed to load staff",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  const loadReport = async () => {
+    if (!token) return;
+    try {
+      const data = await fetchReportSummary(token);
+      setReport(data);
+    } catch (error) {
+      toast({
+        title: "Failed to load reports",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate("/admin-app/login");
@@ -152,6 +217,8 @@ const AdminApp = () => {
     loadRooms();
     loadBookings();
     loadAccounts();
+    loadStaff();
+    loadReport();
   }, [token, navigate]);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
@@ -231,6 +298,56 @@ const AdminApp = () => {
     }
   };
 
+  const handleCreateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    try {
+      await createStaff(token, {
+        name: staffForm.name,
+        email: staffForm.email,
+        phone: staffForm.phone,
+        role: staffForm.role,
+        address: staffForm.address || null,
+        shift: staffForm.shift || null,
+        account_details: staffForm.account_details || null,
+        status: staffForm.status,
+      });
+      toast({ title: "Staff created" });
+      setStaffForm({
+        name: "",
+        email: "",
+        phone: "",
+        role: "Manager",
+        address: "",
+        shift: "",
+        account_details: "",
+        status: "active",
+      });
+      loadStaff();
+    } catch (error) {
+      toast({
+        title: "Staff creation failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteStaff = async (id: number) => {
+    if (!token) return;
+    try {
+      await deleteStaff(token, id);
+      toast({ title: "Staff deleted" });
+      loadStaff();
+    } catch (error) {
+      toast({
+        title: "Staff deletion failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteAccount = async (id: number) => {
     if (!token) return;
     try {
@@ -291,6 +408,31 @@ const AdminApp = () => {
     }
   };
 
+  const downloadReport = async (path: string, filename: string) => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${BACKEND_URL}${path}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Export failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -320,6 +462,8 @@ const AdminApp = () => {
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="payments">Payments</TabsTrigger>
+              <TabsTrigger value="staff">Staff</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
 
             <TabsContent value="rooms" className="mt-4">
@@ -535,6 +679,147 @@ const AdminApp = () => {
                       </TableBody>
                     </Table>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="staff" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Staff Accounts</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <form onSubmit={handleCreateStaff} className="grid gap-3 md:grid-cols-3">
+                    <div>
+                      <Label>Name</Label>
+                      <Input value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Phone</Label>
+                      <Input value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Role</Label>
+                      <Input value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Address</Label>
+                      <Input value={staffForm.address} onChange={(e) => setStaffForm({ ...staffForm, address: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Shift</Label>
+                      <Input value={staffForm.shift} onChange={(e) => setStaffForm({ ...staffForm, shift: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label>Account Details</Label>
+                      <Input value={staffForm.account_details} onChange={(e) => setStaffForm({ ...staffForm, account_details: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Input value={staffForm.status} onChange={(e) => setStaffForm({ ...staffForm, status: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Button type="submit">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Staff
+                      </Button>
+                    </div>
+                  </form>
+
+                  {loadingStaff ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading staff...
+                    </div>
+                  ) : staff.length === 0 ? (
+                    <p className="text-muted-foreground">No staff yet.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {staff.map((member) => (
+                          <TableRow key={member.id}>
+                            <TableCell>{member.id}</TableCell>
+                            <TableCell>{member.name}</TableCell>
+                            <TableCell>{member.email}</TableCell>
+                            <TableCell>{member.role}</TableCell>
+                            <TableCell>{member.status}</TableCell>
+                            <TableCell>
+                              <Button variant="destructive" size="sm" onClick={() => handleDeleteStaff(member.id)}>
+                                Delete
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reports" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reports</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {!report ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading reports...
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Total Bookings</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-2xl font-semibold">{report.total_bookings}</CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Occupancy Rate</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-2xl font-semibold">
+                          {(report.occupancy_rate * 100).toFixed(1)}%
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Estimated Revenue</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-2xl font-semibold">{report.estimated_revenue}</CardContent>
+                      </Card>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={() => downloadReport("/api/admin/reports/bookings.csv", "bookings.csv")}>
+                      Export Bookings CSV
+                    </Button>
+                    <Button variant="outline" onClick={() => downloadReport("/api/admin/reports/bookings.xlsx", "bookings.xlsx")}>
+                      Export Bookings Excel
+                    </Button>
+                    <Button variant="outline" onClick={() => downloadReport("/api/admin/reports/staff.csv", "staff.csv")}>
+                      Export Staff CSV
+                    </Button>
+                    <Button variant="outline" onClick={() => downloadReport("/api/admin/reports/staff.xlsx", "staff.xlsx")}>
+                      Export Staff Excel
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

@@ -274,3 +274,49 @@ export async function updatePaymentProof(
   });
   if (!response.ok) throw new Error('Failed to update payment proof');
 }
+
+export async function fetchStaff(token: string): Promise<any[]> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/staff`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch staff');
+  return response.json();
+}
+
+export async function createStaff(token: string, payload: any): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/staff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to create staff');
+  return response.json();
+}
+
+export async function updateStaff(token: string, id: number, payload: any): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/staff/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to update staff');
+  return response.json();
+}
+
+export async function deleteStaff(token: string, id: number): Promise<void> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/staff/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to delete staff');
+}
+
+export async function fetchReportSummary(token: string): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/reports/summary`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch reports');
+  return response.json();
+}

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 import os
 from sqlmodel import Session, select
 from ..db_core import get_session, engine, init_db
-from ..models import AdminUser, Booking, ContactMessage, Room, PaymentAccount, BookingMeta
+from ..models import AdminUser, Booking, ContactMessage, Room, PaymentAccount, BookingMeta, StaffMember
 from ..schemas import (
     AdminLogin,
     AdminChangePassword,
@@ -12,7 +12,15 @@ from ..schemas import (
     PaymentAccountUpdate,
     BookingStatusUpdate,
     PaymentProofUpdate,
+    StaffCreate,
+    StaffUpdate,
 )
+from datetime import date, timedelta
+from typing import Optional
+from fastapi.responses import StreamingResponse
+import csv
+import io
+from openpyxl import Workbook
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -194,6 +202,147 @@ def update_payment_proof(
     session.commit()
     session.refresh(meta)
     return {"message": "Payment proof updated"}
+
+# Staff management
+@router.get("/staff")
+def list_staff(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    return session.exec(select(StaffMember)).all()
+
+@router.post("/staff")
+def create_staff(payload: StaffCreate, session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    staff = StaffMember(**payload.model_dump())
+    session.add(staff)
+    session.commit()
+    session.refresh(staff)
+    return staff
+
+@router.put("/staff/{staff_id}")
+def update_staff(staff_id: int, payload: StaffUpdate, session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    staff = session.get(StaffMember, staff_id)
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(staff, key, value)
+    session.add(staff)
+    session.commit()
+    session.refresh(staff)
+    return staff
+
+@router.delete("/staff/{staff_id}")
+def delete_staff(staff_id: int, session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    staff = session.get(StaffMember, staff_id)
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    session.delete(staff)
+    session.commit()
+    return {"message": "Staff deleted"}
+
+# Reports
+@router.get("/reports/summary")
+def report_summary(
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    session: Session = Depends(get_session),
+    admin=Depends(get_current_admin),
+):
+    if not to_date:
+        to_date = date.today()
+    if not from_date:
+        from_date = to_date - timedelta(days=30)
+
+    bookings = session.exec(select(Booking)).all()
+    rooms = session.exec(select(Room)).all()
+
+    rooms_count = len(rooms)
+    days = (to_date - from_date).days or 1
+
+    # Average price per room_type
+    price_map: dict[str, float] = {}
+    type_counts: dict[str, int] = {}
+    for r in rooms:
+        price_map[r.room_type] = price_map.get(r.room_type, 0) + r.price
+        type_counts[r.room_type] = type_counts.get(r.room_type, 0) + 1
+    for t, total in price_map.items():
+        price_map[t] = total / max(type_counts.get(t, 1), 1)
+
+    total_bookings = 0
+    booked_nights = 0
+    estimated_revenue = 0.0
+    for b in bookings:
+        if b.check_out < from_date or b.check_in > to_date:
+            continue
+        total_bookings += 1
+        start = max(b.check_in, from_date)
+        end = min(b.check_out, to_date)
+        nights = max((end - start).days, 0)
+        booked_nights += nights
+        estimated_revenue += nights * price_map.get(b.room_type, 0)
+
+    occupancy_rate = 0.0
+    if rooms_count > 0:
+        occupancy_rate = booked_nights / float(rooms_count * days)
+
+    return {
+        "from_date": from_date,
+        "to_date": to_date,
+        "total_bookings": total_bookings,
+        "rooms_count": rooms_count,
+        "booked_nights": booked_nights,
+        "occupancy_rate": occupancy_rate,
+        "estimated_revenue": round(estimated_revenue, 2),
+    }
+
+def _export_rows_csv(rows: list[dict], filename: str):
+    buffer = io.StringIO()
+    if not rows:
+        rows = [{}]
+    writer = csv.DictWriter(buffer, fieldnames=list(rows[0].keys()))
+    writer.writeheader()
+    writer.writerows(rows)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+def _export_rows_xlsx(rows: list[dict], filename: str):
+    wb = Workbook()
+    ws = wb.active
+    if not rows:
+        rows = [{}]
+    headers = list(rows[0].keys())
+    ws.append(headers)
+    for row in rows:
+        ws.append([row.get(h) for h in headers])
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+@router.get("/reports/bookings.csv")
+def export_bookings_csv(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    rows = get_bookings(session, admin)
+    return _export_rows_csv(rows, "bookings.csv")
+
+@router.get("/reports/bookings.xlsx")
+def export_bookings_xlsx(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    rows = get_bookings(session, admin)
+    return _export_rows_xlsx(rows, "bookings.xlsx")
+
+@router.get("/reports/staff.csv")
+def export_staff_csv(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    rows = [s.model_dump() for s in session.exec(select(StaffMember)).all()]
+    return _export_rows_csv(rows, "staff.csv")
+
+@router.get("/reports/staff.xlsx")
+def export_staff_xlsx(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
+    rows = [s.model_dump() for s in session.exec(select(StaffMember)).all()]
+    return _export_rows_xlsx(rows, "staff.xlsx")
 
 @router.post("/change-password")
 def change_password(

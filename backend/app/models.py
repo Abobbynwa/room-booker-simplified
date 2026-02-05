@@ -51,3 +51,15 @@ class BookingMeta(SQLModel, table=True):
     payment_status: str = "unpaid"
     payment_proof: Optional[str] = None  # base64 or URL
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class StaffMember(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    email: str
+    phone: str
+    role: str
+    address: Optional[str] = None
+    shift: Optional[str] = None
+    account_details: Optional[str] = None
+    status: str = "active"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
