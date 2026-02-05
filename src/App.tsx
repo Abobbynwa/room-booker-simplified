@@ -14,6 +14,8 @@ import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import AdminApp from "./pages/AdminApp";
+import AdminAppLogin from "./pages/AdminAppLogin";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +34,15 @@ const App = () => (
             <Route path="/booking-status" element={<BookingStatus />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin-app/login" element={<AdminAppLogin />} />
+            <Route 
+              path="/admin-app" 
+              element={
+                <ProtectedRoute requireAdmin redirectTo="/admin-app/login">
+                  <AdminApp />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/admin" 
               element={

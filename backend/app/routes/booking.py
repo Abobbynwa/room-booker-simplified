@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlmodel import Session
 from ..db_core import get_session
-from ..models import Booking
+from ..models import Booking, BookingMeta
 from ..schemas import BookingCreate
 from ..utils.email import send_email
 import os
@@ -18,6 +18,11 @@ def submit_booking(
     session.add(b)
     session.commit()
     session.refresh(b)
+
+    # Create metadata row for ERP status tracking
+    meta = BookingMeta(booking_id=b.id)
+    session.add(meta)
+    session.commit()
 
     admin_email = os.getenv("ADMIN_ALERT_EMAIL")
     if admin_email:

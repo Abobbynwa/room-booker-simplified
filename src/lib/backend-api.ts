@@ -36,6 +36,24 @@ interface AdminChangePasswordPayload {
   new_password: string;
 }
 
+interface RoomPayload {
+  name: string;
+  room_type: string;
+  price: number;
+  capacity: number;
+  amenities?: string | null;
+  image_url?: string | null;
+  is_available?: boolean;
+}
+
+interface PaymentAccountPayload {
+  label: string;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  instructions?: string | null;
+}
+
 /**
  * Submit a booking via the FastAPI backend
  */
@@ -154,4 +172,105 @@ export async function changeAdminPassword(
   }
 
   return response.json();
+}
+
+export async function fetchAdminRooms(token: string): Promise<any[]> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/rooms`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch rooms');
+  return response.json();
+}
+
+export async function createAdminRoom(token: string, payload: RoomPayload): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/rooms`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to create room');
+  return response.json();
+}
+
+export async function updateAdminRoom(token: string, id: number, payload: Partial<RoomPayload>): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/rooms/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to update room');
+  return response.json();
+}
+
+export async function deleteAdminRoom(token: string, id: number): Promise<void> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/rooms/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to delete room');
+}
+
+export async function fetchPaymentAccounts(token: string): Promise<any[]> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/payment-accounts`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch payment accounts');
+  return response.json();
+}
+
+export async function createPaymentAccount(token: string, payload: PaymentAccountPayload): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/payment-accounts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to create payment account');
+  return response.json();
+}
+
+export async function updatePaymentAccount(token: string, id: number, payload: Partial<PaymentAccountPayload>): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/payment-accounts/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to update payment account');
+  return response.json();
+}
+
+export async function deletePaymentAccount(token: string, id: number): Promise<void> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/payment-accounts/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Failed to delete payment account');
+}
+
+export async function updateBookingStatus(
+  token: string,
+  bookingId: number,
+  status: string,
+  payment_status?: string
+): Promise<void> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/bookings/${bookingId}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status, payment_status }),
+  });
+  if (!response.ok) throw new Error('Failed to update booking status');
+}
+
+export async function updatePaymentProof(
+  token: string,
+  bookingId: number,
+  payment_proof: string
+): Promise<void> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/bookings/${bookingId}/payment-proof`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ payment_proof }),
+  });
+  if (!response.ok) throw new Error('Failed to update payment proof');
 }

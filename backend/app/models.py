@@ -22,3 +22,32 @@ class AdminUser(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str
     password_hash: str
+
+# ERP entities
+class Room(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    room_type: str
+    price: float
+    capacity: int
+    amenities: Optional[str] = None  # comma-separated list
+    image_url: Optional[str] = None
+    is_available: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PaymentAccount(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    label: str
+    bank_name: str
+    account_name: str
+    account_number: str
+    instructions: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class BookingMeta(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    booking_id: int
+    status: str = "pending"
+    payment_status: str = "unpaid"
+    payment_proof: Optional[str] = None  # base64 or URL
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
