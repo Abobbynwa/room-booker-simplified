@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchAdminBookings, fetchAdminMessages } from '@/lib/backend-api';
-import { Loader2, LogOut, RefreshCcw } from 'lucide-react';
+import { changeAdminPassword, fetchAdminBookings, fetchAdminMessages } from '@/lib/backend-api';
+import { Loader2, LogOut, RefreshCcw, ShieldCheck, Mail, ClipboardList } from 'lucide-react';
 
 type AdminBooking = {
   id: number;
@@ -37,6 +39,10 @@ const Admin = () => {
   const [messages, setMessages] = useState<AdminMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -78,6 +84,39 @@ const Admin = () => {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    if (!currentPassword || !newPassword) {
+      toast({ title: 'Missing fields', description: 'Enter your current and new password.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Passwords do not match', description: 'Please confirm your new password.' });
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const result = await changeAdminPassword(token, {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      toast({ title: 'Password updated', description: result.message });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      toast({
+        title: 'Password update failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate('/auth');
@@ -111,10 +150,41 @@ const Admin = () => {
             </div>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Total Bookings</CardTitle>
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="text-3xl font-semibold">
+                {bookings.length}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Contact Messages</CardTitle>
+                <Mail className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="text-3xl font-semibold">
+                {messages.length}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Admin Status</CardTitle>
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Signed in and connected to live backend.
+              </CardContent>
+            </Card>
+          </div>
+
           <Tabs defaultValue="bookings">
             <TabsList>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="messages">Messages</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="bookings" className="mt-4">
@@ -199,6 +269,55 @@ const Admin = () => {
                       </TableBody>
                     </Table>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="settings" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Change Password</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form className="space-y-4 max-w-md" onSubmit={handleChangePassword}>
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" disabled={savingPassword}>
+                      {savingPassword ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Password'
+                      )}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </TabsContent>

@@ -31,6 +31,11 @@ interface AdminLoginResponse {
   token_type: string;
 }
 
+interface AdminChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
 /**
  * Submit a booking via the FastAPI backend
  */
@@ -122,6 +127,30 @@ export async function fetchAdminMessages(token: string): Promise<any[]> {
 
   if (!response.ok) {
     throw new Error('Failed to fetch messages');
+  }
+
+  return response.json();
+}
+
+/**
+ * Change admin password (requires authentication)
+ */
+export async function changeAdminPassword(
+  token: string,
+  payload: AdminChangePasswordPayload
+): Promise<{ message: string }> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/change-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Password update failed' }));
+    throw new Error(error.detail || 'Password update failed');
   }
 
   return response.json();

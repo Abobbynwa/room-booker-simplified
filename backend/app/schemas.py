@@ -16,3 +16,7 @@ class ContactCreate(BaseModel):
 class AdminLogin(BaseModel):
     email: str
     password: str
+
+class AdminChangePassword(BaseModel):
+    current_password: str
+    new_password: str

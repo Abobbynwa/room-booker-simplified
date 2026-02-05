@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlmodel import Session, select
 from ..db_core import get_session, engine, init_db
 from ..models import AdminUser, Booking, ContactMessage
-from ..schemas import AdminLogin
+from ..schemas import AdminLogin, AdminChangePassword
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -50,3 +50,21 @@ def get_bookings(session: Session = Depends(get_session), admin=Depends(get_curr
 @router.get("/messages")
 def get_messages(session: Session = Depends(get_session), admin=Depends(get_current_admin)):
     return session.exec(select(ContactMessage)).all()
+
+@router.post("/change-password")
+def change_password(
+    payload: AdminChangePassword,
+    session: Session = Depends(get_session),
+    admin_email: str = Depends(get_current_admin),
+):
+    admin = session.exec(select(AdminUser).where(AdminUser.email == admin_email)).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    if not verify_password(payload.current_password, admin.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    admin.password_hash = hash_password(payload.new_password)
+    session.add(admin)
+    session.commit()
+    session.refresh(admin)
+    return {"message": "Password updated successfully"}

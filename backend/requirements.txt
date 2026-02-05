@@ -8,3 +8,4 @@ PyJWT
 gunicorn
 python-multipart
 pydantic-settings
+fastapi-mail
