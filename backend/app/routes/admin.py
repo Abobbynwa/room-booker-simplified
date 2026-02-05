@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
-import os
 from sqlmodel import Session, select
 from ..db_core import get_session, engine, init_db
 from ..models import AdminUser, Booking, ContactMessage
@@ -42,28 +41,6 @@ def init_admin(credentials: AdminLogin, session: Session = Depends(get_session))
     session.refresh(new_admin)
     return {"message": f"Admin created for {new_admin.email}"}
 
-# One-time password reset endpoint (disable after use by removing ADMIN_RESET_TOKEN)
-@router.post("/reset-password")
-def reset_password(
-    credentials: AdminLogin,
-    session: Session = Depends(get_session),
-    x_admin_reset_token: str = Header(None),
-):
-    expected = os.getenv("ADMIN_RESET_TOKEN")
-    if not expected:
-        raise HTTPException(status_code=403, detail="Password reset disabled")
-    if not x_admin_reset_token or x_admin_reset_token != expected:
-        raise HTTPException(status_code=401, detail="Invalid reset token")
-
-    admin = session.exec(select(AdminUser).where(AdminUser.email == credentials.email)).first()
-    if not admin:
-        raise HTTPException(status_code=404, detail="Admin not found")
-
-    admin.password_hash = hash_password(credentials.password)
-    session.add(admin)
-    session.commit()
-    session.refresh(admin)
-    return {"message": f"Password reset for {admin.email}"}
 
 @router.get("/bookings")
 def get_bookings(session: Session = Depends(get_session), admin=Depends(get_current_admin)):

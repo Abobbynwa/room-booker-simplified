@@ -8,7 +8,8 @@ from app.routes import contact, booking, admin
 
 app = FastAPI(title="Room Booker API")
 
-origins = ["*"]
+origins_env = os.getenv("CORS_ORIGINS", "*")
+origins = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,

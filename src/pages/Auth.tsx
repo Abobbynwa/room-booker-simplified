@@ -72,7 +72,7 @@ const Auth = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@hotel.com"
+                  placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -97,11 +97,6 @@ const Auth = () => {
                   "Sign In"
                 )}
               </Button>
-              <div className="text-sm text-muted-foreground text-center p-3 bg-muted/50 rounded-lg">
-                <p className="font-medium">Demo Credentials:</p>
-                <p>Email: admin@hotel.com</p>
-                <p>Password: admin123</p>
-              </div>
             </form>
           </CardContent>
         </Card>

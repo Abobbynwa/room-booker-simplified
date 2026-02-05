@@ -1,44 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { fetchAllBookings, fetchRooms, updateBookingStatus, deleteBooking, updateRoomAvailability, getPaymentProofUrl } from '@/lib/api';
-import { Booking, BookingStatus, Room, RoomType } from '@/types/hotel';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { format } from 'date-fns';
-import { Search, Hotel, CalendarCheck, Users, DollarSign, Trash2, Eye, Loader2, LogOut, ImageIcon, ExternalLink } from 'lucide-react';
+import { fetchAdminBookings, fetchAdminMessages } from '@/lib/backend-api';
+import { Loader2, LogOut, RefreshCcw } from 'lucide-react';
 
-const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
-  pending: { label: 'Pending', color: 'bg-yellow-500' },
-  confirmed: { label: 'Confirmed', color: 'bg-green-500' },
-  cancelled: { label: 'Cancelled', color: 'bg-destructive' },
-  completed: { label: 'Completed', color: 'bg-muted-foreground' },
+type AdminBooking = {
+  id: number;
+  name: string;
+  email: string;
+  room_type: string;
+  check_in: string;
+  check_out: string;
+  created_at: string;
+};
+
+type AdminMessage = {
+  id: number;
+  name: string;
+  email: string;
+  message: string;
+  created_at: string;
 };
 
 const Admin = () => {
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const { token, user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [bookings, setBookings] = useState<AdminBooking[]>([]);
+  const [messages, setMessages] = useState<AdminMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [roomSearch, setRoomSearch] = useState('');
-  const [roomTypeFilter, setRoomTypeFilter] = useState<RoomType | 'all'>('all');
-  const [roomAvailabilityFilter, setRoomAvailabilityFilter] = useState<'all' | 'available' | 'unavailable'>('all');
-  const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
-  const [loadingProof, setLoadingProof] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true);
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,562 +44,167 @@ const Admin = () => {
     toast({ title: 'Signed out successfully' });
   };
 
-  useEffect(() => {
-    Promise.all([fetchAllBookings(), fetchRooms()])
-      .then(([bookingsData, roomsData]) => {
-        setBookings(bookingsData);
-        setRooms(roomsData);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  const refreshData = async () => {
-    const [bookingsData, roomsData] = await Promise.all([fetchAllBookings(), fetchRooms()]);
-    setBookings(bookingsData);
-    setRooms(roomsData);
-  };
-
-  const handleStatusChange = async (id: string, newStatus: BookingStatus) => {
+  const loadBookings = async () => {
+    if (!token) return;
+    setLoading(true);
     try {
-      const booking = bookings.find(b => b.id === id);
-      const room = booking ? getRoomById(booking.room_id) : undefined;
-      
-      await updateBookingStatus(
-        id, 
-        newStatus, 
-        newStatus === 'confirmed' ? 'confirmed' : undefined,
-        booking ? {
-          guest_name: booking.guest_name,
-          guest_email: booking.guest_email,
-          reference_number: booking.reference_number,
-          check_in_date: booking.check_in_date,
-          check_out_date: booking.check_out_date,
-          room_name: room?.name,
-          total_amount: booking.total_amount,
-        } : undefined
-      );
-      await refreshData();
-      
-      toast({
-        title: 'Status Updated',
-        description: `Booking is now ${statusConfig[newStatus].label}.`,
-      });
-
-      // Simulate email/SMS notification for confirmed or cancelled bookings
-      if (booking && (newStatus === 'confirmed' || newStatus === 'cancelled')) {
-        const notificationType = newStatus === 'confirmed' ? '✅ Confirmation' : '❌ Cancellation';
-        const emailMessage = newStatus === 'confirmed' 
-          ? `Your booking (${booking.reference_number}) has been confirmed! Check-in: ${format(new Date(booking.check_in_date), 'MMM d, yyyy')}`
-          : `Your booking (${booking.reference_number}) has been cancelled. We hope to see you again soon.`;
-        
-        // Simulate email notification
-        setTimeout(() => {
-          toast({
-            title: `📧 Email Sent - ${notificationType}`,
-            description: `To: ${booking.guest_email}\n${emailMessage}`,
-          });
-        }, 500);
-
-        // Simulate SMS notification
-        setTimeout(() => {
-          toast({
-            title: `📱 SMS Sent - ${notificationType}`,
-            description: `To: ${booking.guest_phone}\n${emailMessage}`,
-          });
-        }, 1000);
-      }
+      const data = await fetchAdminBookings(token);
+      setBookings(data as AdminBooking[]);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update booking status.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteBooking = async (id: string) => {
-    if (confirm('Are you sure you want to delete this booking?')) {
-      try {
-        await deleteBooking(id);
-        await refreshData();
-        toast({
-          title: 'Booking Deleted',
-          description: 'Booking has been deleted.',
-        });
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete booking.',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
-  const handleRoomAvailability = async (roomId: string, isAvailable: boolean) => {
-    try {
-      await updateRoomAvailability(roomId, isAvailable);
-      await refreshData();
-      toast({
-        title: 'Room Updated',
-        description: `Room is now ${isAvailable ? 'available' : 'unavailable'}.`,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update room.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleViewPaymentProof = async (proofPath: string) => {
-    setLoadingProof(true);
-    try {
-      const url = await getPaymentProofUrl(proofPath);
-      setPaymentProofUrl(url);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load payment proof.',
+        title: 'Failed to load bookings',
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
-      setLoadingProof(false);
+      setLoading(false);
     }
   };
 
-  const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = 
-      booking.reference_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.guest_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.guest_email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || booking.booking_status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const filteredRooms = rooms.filter(room => {
-    const matchesSearch = 
-      room.room_number.toLowerCase().includes(roomSearch.toLowerCase()) ||
-      room.name.toLowerCase().includes(roomSearch.toLowerCase());
-    const matchesType = roomTypeFilter === 'all' || room.type === roomTypeFilter;
-    const matchesAvailability = 
-      roomAvailabilityFilter === 'all' || 
-      (roomAvailabilityFilter === 'available' && room.is_available) ||
-      (roomAvailabilityFilter === 'unavailable' && !room.is_available);
-    return matchesSearch && matchesType && matchesAvailability;
-  });
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(price);
+  const loadMessages = async () => {
+    if (!token) return;
+    setLoadingMessages(true);
+    try {
+      const data = await fetchAdminMessages(token);
+      setMessages(data as AdminMessage[]);
+    } catch (error) {
+      toast({
+        title: 'Failed to load messages',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingMessages(false);
+    }
   };
 
-  const stats = {
-    totalBookings: bookings.length,
-    pendingBookings: bookings.filter(b => b.booking_status === 'pending').length,
-    confirmedBookings: bookings.filter(b => b.booking_status === 'confirmed').length,
-    totalRevenue: bookings.filter(b => b.booking_status !== 'cancelled').reduce((sum, b) => sum + b.total_amount, 0),
-  };
-
-  const getRoomById = (roomId: string) => rooms.find(r => r.id === roomId);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 pt-20 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gold" />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!token) {
+      navigate('/auth');
+      return;
+    }
+    loadBookings();
+    loadMessages();
+  }, [token, navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
-      <main className="flex-1 pt-20">
-        <section className="py-12 bg-card border-b border-border">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <span className="text-gold uppercase tracking-[0.2em] text-sm font-medium">Management</span>
-                <h1 className="text-4xl md:text-5xl font-serif font-bold mt-2">Admin Panel</h1>
-                <p className="text-muted-foreground mt-2">Signed in as {user?.email}</p>
-              </div>
-              <Button variant="outline" onClick={handleSignOut} className="gap-2">
-                <LogOut className="h-4 w-4" />
+      <main className="flex-1 px-4 py-10">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-serif font-bold">Admin Panel</h1>
+              <p className="text-muted-foreground mt-1">
+                Signed in as {user?.email || 'admin'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { loadBookings(); loadMessages(); }}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+              <Button variant="destructive" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
               </Button>
             </div>
           </div>
-        </section>
 
-        <section className="py-8">
-          <div className="container mx-auto px-4">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gold/10 rounded-lg">
-                      <CalendarCheck className="h-6 w-6 text-gold" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Bookings</p>
-                      <p className="text-2xl font-bold">{stats.totalBookings}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-yellow-500/10 rounded-lg">
-                      <Users className="h-6 w-6 text-yellow-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Pending</p>
-                      <p className="text-2xl font-bold">{stats.pendingBookings}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-green-500/10 rounded-lg">
-                      <Hotel className="h-6 w-6 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Confirmed</p>
-                      <p className="text-2xl font-bold">{stats.confirmedBookings}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gold/10 rounded-lg">
-                      <DollarSign className="h-6 w-6 text-gold" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Revenue</p>
-                      <p className="text-xl font-bold">{formatPrice(stats.totalRevenue)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <Tabs defaultValue="bookings">
+            <TabsList>
+              <TabsTrigger value="bookings">Bookings</TabsTrigger>
+              <TabsTrigger value="messages">Messages</TabsTrigger>
+            </TabsList>
 
-            <Tabs defaultValue="bookings">
-              <TabsList className="mb-6">
-                <TabsTrigger value="bookings">Bookings</TabsTrigger>
-                <TabsTrigger value="rooms">Rooms</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="bookings">
-                <Card>
-                  <CardHeader>
-                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-                      <CardTitle className="font-serif">All Bookings</CardTitle>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search bookings..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 w-full sm:w-64"
-                          />
-                        </div>
-                        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as BookingStatus | 'all')}>
-                          <SelectTrigger className="w-full sm:w-40">
-                            <SelectValue placeholder="Filter status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+            <TabsContent value="bookings" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bookings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading bookings...
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    {filteredBookings.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Reference</TableHead>
-                              <TableHead>Guest</TableHead>
-                              <TableHead>Room</TableHead>
-                              <TableHead>Dates</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredBookings.map(booking => {
-                              const room = getRoomById(booking.room_id);
-                              const typeLabel = room ? room.type.charAt(0).toUpperCase() + room.type.slice(1) : '';
-                              return (
-                                <TableRow key={booking.id}>
-                                  <TableCell className="font-mono text-sm">{booking.reference_number}</TableCell>
-                                  <TableCell>
-                                    <div>
-                                      <p className="font-medium">{booking.guest_name}</p>
-                                      <p className="text-sm text-muted-foreground">{booking.guest_phone}</p>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>{typeLabel} ({room?.room_number})</TableCell>
-                                  <TableCell>
-                                    <div className="text-sm">
-                                      <p>{format(new Date(booking.check_in_date), 'MMM d')}</p>
-                                      <p className="text-muted-foreground">to {format(new Date(booking.check_out_date), 'MMM d')}</p>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="font-medium">{formatPrice(booking.total_amount)}</TableCell>
-                                  <TableCell>
-                                    <Select
-                                      value={booking.booking_status}
-                                      onValueChange={(v) => handleStatusChange(booking.id, v as BookingStatus)}
-                                    >
-                                      <SelectTrigger className="w-32">
-                                        <Badge className={`${statusConfig[booking.booking_status].color} text-white`}>
-                                          {statusConfig[booking.booking_status].label}
-                                        </Badge>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Dialog>
-                                        <DialogTrigger asChild>
-                                          <Button variant="ghost" size="icon" onClick={() => {
-                                            setSelectedBooking(booking);
-                                            if (booking.payment_proof_url) {
-                                              handleViewPaymentProof(booking.payment_proof_url);
-                                            } else {
-                                              setPaymentProofUrl(null);
-                                            }
-                                          }}>
-                                            <Eye className="h-4 w-4" />
-                                          </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                          <DialogHeader>
-                                            <DialogTitle className="font-serif">Booking Details</DialogTitle>
-                                          </DialogHeader>
-                                          {selectedBooking && (
-                                            <div className="space-y-4">
-                                              <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Reference</p>
-                                                  <p className="font-mono">{selectedBooking.reference_number}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Status</p>
-                                                  <Badge className={`${statusConfig[selectedBooking.booking_status].color} text-white`}>
-                                                    {statusConfig[selectedBooking.booking_status].label}
-                                                  </Badge>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Guest Name</p>
-                                                  <p>{selectedBooking.guest_name}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Phone</p>
-                                                  <p>{selectedBooking.guest_phone}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Email</p>
-                                                  <p>{selectedBooking.guest_email}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Total Amount</p>
-                                                  <p className="font-semibold text-gold">{formatPrice(selectedBooking.total_amount)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Check-in</p>
-                                                  <p>{format(new Date(selectedBooking.check_in_date), 'PPP')}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Check-out</p>
-                                                  <p>{format(new Date(selectedBooking.check_out_date), 'PPP')}</p>
-                                                </div>
-                                              </div>
-                                              {selectedBooking.special_requests && (
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground">Special Requests</p>
-                                                  <p className="text-sm">{selectedBooking.special_requests}</p>
-                                                </div>
-                                              )}
-                                              {selectedBooking.payment_proof_url && (
-                                                <div>
-                                                  <p className="text-sm text-muted-foreground mb-2">Payment Proof</p>
-                                                  {loadingProof ? (
-                                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                                      Loading...
-                                                    </div>
-                                                  ) : paymentProofUrl ? (
-                                                    <div className="space-y-2">
-                                                      <img 
-                                                        src={paymentProofUrl} 
-                                                        alt="Payment proof" 
-                                                        className="max-w-full max-h-64 rounded-lg border"
-                                                      />
-                                                      <Button variant="outline" size="sm" asChild>
-                                                        <a href={paymentProofUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
-                                                          <ExternalLink className="h-4 w-4" />
-                                                          Open Full Size
-                                                        </a>
-                                                      </Button>
-                                                    </div>
-                                                  ) : (
-                                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                                      <ImageIcon className="h-4 w-4" />
-                                                      Unable to load image
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </DialogContent>
-                                      </Dialog>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon"
-                                        onClick={() => handleDeleteBooking(booking.id)}
-                                      >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <CalendarCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No bookings found</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="rooms">
-                <Card>
-                  <CardHeader>
-                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-                      <CardTitle className="font-serif">All Rooms ({rooms.length})</CardTitle>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search rooms..."
-                            value={roomSearch}
-                            onChange={(e) => setRoomSearch(e.target.value)}
-                            className="pl-9 w-full sm:w-64"
-                          />
-                        </div>
-                        <Select value={roomTypeFilter} onValueChange={(v) => setRoomTypeFilter(v as RoomType | 'all')}>
-                          <SelectTrigger className="w-full sm:w-40">
-                            <SelectValue placeholder="Room type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="deluxe">Deluxe</SelectItem>
-                            <SelectItem value="executive">Executive</SelectItem>
-                            <SelectItem value="suite">Suite</SelectItem>
-                            <SelectItem value="presidential">Presidential</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={roomAvailabilityFilter} onValueChange={(v) => setRoomAvailabilityFilter(v as 'all' | 'available' | 'unavailable')}>
-                          <SelectTrigger className="w-full sm:w-40">
-                            <SelectValue placeholder="Availability" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="available">Available</SelectItem>
-                            <SelectItem value="unavailable">Unavailable</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Room</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Price/Night</TableHead>
-                            <TableHead>Availability</TableHead>
+                  ) : bookings.length === 0 ? (
+                    <p className="text-muted-foreground">No bookings yet.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Room Type</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Check Out</TableHead>
+                          <TableHead>Created</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bookings.map((booking) => (
+                          <TableRow key={booking.id}>
+                            <TableCell>{booking.id}</TableCell>
+                            <TableCell>{booking.name}</TableCell>
+                            <TableCell>{booking.email}</TableCell>
+                            <TableCell>{booking.room_type}</TableCell>
+                            <TableCell>{booking.check_in}</TableCell>
+                            <TableCell>{booking.check_out}</TableCell>
+                            <TableCell>{booking.created_at}</TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredRooms.slice(0, 50).map(room => (
-                            <TableRow key={room.id}>
-                              <TableCell className="font-medium">Room {room.room_number}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">
-                                  {room.type.charAt(0).toUpperCase() + room.type.slice(1)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{formatPrice(room.price_per_night)}</TableCell>
-                              <TableCell>
-                                <Button
-                                  variant={room.is_available ? 'default' : 'destructive'}
-                                  size="sm"
-                                  onClick={() => handleRoomAvailability(room.id, !room.is_available)}
-                                >
-                                  {room.is_available ? 'Available' : 'Unavailable'}
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                      {filteredRooms.length > 50 && (
-                        <p className="text-sm text-muted-foreground text-center mt-4">
-                          Showing 50 of {filteredRooms.length} rooms. Use filters to narrow down.
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
-      </main>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
+            <TabsContent value="messages" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Messages</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingMessages ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading messages...
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <p className="text-muted-foreground">No messages yet.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Message</TableHead>
+                          <TableHead>Created</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {messages.map((message) => (
+                          <TableRow key={message.id}>
+                            <TableCell>{message.id}</TableCell>
+                            <TableCell>{message.name}</TableCell>
+                            <TableCell>{message.email}</TableCell>
+                            <TableCell className="max-w-md whitespace-pre-wrap">{message.message}</TableCell>
+                            <TableCell>{message.created_at}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
       <Footer />
     </div>
   );
