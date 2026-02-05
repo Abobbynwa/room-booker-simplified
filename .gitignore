@@ -6,6 +6,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+<<<<<<< HEAD
+=======
+.env
+__pycache__/
+node_modules/
+venv/
+>>>>>>> b6b2605 (Update DB config for Render Postgres)
 
 node_modules
 dist
@@ -22,3 +29,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+<<<<<<< HEAD
+=======
+.env
+>>>>>>> b6b2605 (Update DB config for Render Postgres)
