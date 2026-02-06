@@ -16,6 +16,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AdminApp from "./pages/AdminApp";
 import AdminAppLogin from "./pages/AdminAppLogin";
+import ERPDashboard from "./pages/ERPDashboard";
+import ERPLogin from "./pages/ERPLogin";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/booking-status" element={<BookingStatus />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/erp/login" element={<ERPLogin />} />
+            <Route path="/erp" element={<ERPDashboard />} />
             <Route path="/admin-app/login" element={<AdminAppLogin />} />
             <Route 
               path="/admin-app" 
