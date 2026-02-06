@@ -286,12 +286,12 @@ export const paymentDetails = [
   {
     bankName: 'OPay',
     accountName: 'AGABA VALENTINE',
-    accountNumber: '+2348149642220',
+    accountNumber: '8149642220',
   },
   {
     bankName: 'Moniepoint',
     accountName: 'AGABA VALENTINE',
-    accountNumber: '1958811611',
+    accountNumber: '8149642220',
   },
   {
     bankName: 'Access Bank',
