@@ -1,0 +1,99 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ERPSidebar } from '@/components/erp/ERPSidebar';
+import { DashboardModule } from '@/components/erp/DashboardModule';
+import { BookingsModule } from '@/components/erp/BookingsModule';
+import { RoomsModule } from '@/components/erp/RoomsModule';
+import { CheckInOutModule } from '@/components/erp/CheckInOutModule';
+import { HousekeepingModule } from '@/components/erp/HousekeepingModule';
+import { StaffModule } from '@/components/erp/StaffModule';
+import { AnalyticsModule } from '@/components/erp/AnalyticsModule';
+import { SettingsModule } from '@/components/erp/SettingsModule';
+import { getERPUser, erpSignOut, hasAccess, ERPUser } from '@/lib/erpData';
+import { Loader2, Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+
+const ERPDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [user, setUser] = useState<ERPUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeModule, setActiveModule] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const u = getERPUser();
+    if (!u) {
+      navigate('/erp/login');
+      return;
+    }
+    setUser(u);
+    setLoading(false);
+  }, [navigate]);
+
+  const handleSignOut = () => {
+    erpSignOut();
+    toast({ title: 'Signed out' });
+    navigate('/erp/login');
+  };
+
+  const handleModuleChange = (module: string) => {
+    if (user && !hasAccess(user.role, module)) {
+      toast({ title: 'Access denied', description: 'You don\'t have permission for this module', variant: 'destructive' });
+      return;
+    }
+    setActiveModule(module);
+    setSidebarOpen(false);
+  };
+
+  if (loading || !user) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  const renderModule = () => {
+    switch (activeModule) {
+      case 'dashboard': return <DashboardModule />;
+      case 'bookings': return <BookingsModule />;
+      case 'rooms': return <RoomsModule />;
+      case 'check-in': return <CheckInOutModule />;
+      case 'housekeeping': return <HousekeepingModule />;
+      case 'staff': return <StaffModule />;
+      case 'analytics': return <AnalyticsModule />;
+      case 'settings': return <SettingsModule user={user} />;
+      default: return <DashboardModule />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <ERPSidebar user={user} activeModule={activeModule} onModuleChange={handleModuleChange} onSignOut={handleSignOut} />
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        {/* Mobile header */}
+        <header className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
+            <Menu className="h-5 w-5" />
+          </Button>
+          <h1 className="font-serif font-bold text-gold">Hotel ERP</h1>
+          <div className="w-9" />
+        </header>
+
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
+          {renderModule()}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default ERPDashboard;
