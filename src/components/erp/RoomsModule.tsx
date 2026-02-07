@@ -1,18 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { getRooms, updateRoomAvailability } from '@/lib/mockData';
 import { Room } from '@/types/hotel';
-import { BedDouble, Users, ToggleLeft, ToggleRight } from 'lucide-react';
+import { BedDouble, Users, LayoutGrid, Map } from 'lucide-react';
+import { FloorPlanView } from './FloorPlanView';
 
 export function RoomsModule() {
   const { toast } = useToast();
   const [rooms, setRooms] = useState(getRooms());
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [view, setView] = useState<'grid' | 'floorplan'>('floorplan');
+
+  // Real-time polling every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => setRooms(getRooms()), 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const refresh = () => setRooms(getRooms());
 
@@ -29,6 +38,22 @@ export function RoomsModule() {
     return true;
   });
 
+  if (view === 'floorplan') {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <Tabs value={view} onValueChange={v => setView(v as 'grid' | 'floorplan')}>
+            <TabsList className="h-8">
+              <TabsTrigger value="floorplan" className="text-xs gap-1"><Map className="h-3 w-3" />Floor Plan</TabsTrigger>
+              <TabsTrigger value="grid" className="text-xs gap-1"><LayoutGrid className="h-3 w-3" />Grid</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <FloorPlanView rooms={filtered} onToggle={toggleAvailability} />
+      </div>
+    );
+  }
+
   const available = rooms.filter(r => r.is_available).length;
   const occupied = rooms.length - available;
 
@@ -42,6 +67,12 @@ export function RoomsModule() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Tabs value={view} onValueChange={v => setView(v as 'grid' | 'floorplan')}>
+            <TabsList className="h-8">
+              <TabsTrigger value="floorplan" className="text-xs gap-1"><Map className="h-3 w-3" />Floor Plan</TabsTrigger>
+              <TabsTrigger value="grid" className="text-xs gap-1"><LayoutGrid className="h-3 w-3" />Grid</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-32"><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
