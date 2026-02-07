@@ -36,6 +36,18 @@ export interface CheckInRecord {
   notes: string;
 }
 
+export interface GuestProfile {
+  id: string;
+  guest_name: string;
+  email: string;
+  phone: string;
+  preferences: string[];
+  notes: string;
+  receipts: { id: string; name: string; data_url: string; uploaded_at: string }[];
+  booking_history: { booking_id: string; room_number: string; check_in: string; check_out: string; amount: number; status: string }[];
+  created_at: string;
+}
+
 export interface HousekeepingTask {
   id: string;
   room_id: string;
@@ -236,6 +248,74 @@ export function updateHousekeepingTask(id: string, data: Partial<HousekeepingTas
 export function deleteHousekeepingTask(id: string): void {
   const tasks = getHousekeepingTasks().filter(t => t.id !== id);
   localStorage.setItem(HOUSEKEEPING_KEY, JSON.stringify(tasks));
+}
+
+// ==================== GUEST PROFILES ====================
+
+const GUEST_PROFILES_KEY = 'erp_guest_profiles';
+
+function buildProfileFromBookings(guestName: string): GuestProfile {
+  const bookings = getBookings().filter(b => b.guest_name === guestName);
+  const rooms = getRooms();
+  return {
+    id: `guest-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    guest_name: guestName,
+    email: bookings[0]?.guest_email || '',
+    phone: bookings[0]?.guest_phone || '',
+    preferences: [],
+    notes: '',
+    receipts: [],
+    booking_history: bookings.map(b => {
+      const room = rooms.find(r => r.id === b.room_id);
+      return {
+        booking_id: b.id,
+        room_number: room?.room_number || 'N/A',
+        check_in: b.check_in_date,
+        check_out: b.check_out_date,
+        amount: b.total_amount,
+        status: b.booking_status,
+      };
+    }),
+    created_at: new Date().toISOString(),
+  };
+}
+
+export function getGuestProfiles(): GuestProfile[] {
+  const stored = localStorage.getItem(GUEST_PROFILES_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveProfiles(profiles: GuestProfile[]) {
+  localStorage.setItem(GUEST_PROFILES_KEY, JSON.stringify(profiles));
+}
+
+export function getOrCreateGuestProfile(guestName: string): GuestProfile {
+  const profiles = getGuestProfiles();
+  let profile = profiles.find(p => p.guest_name === guestName);
+  if (!profile) {
+    profile = buildProfileFromBookings(guestName);
+    profiles.push(profile);
+    saveProfiles(profiles);
+  }
+  return profile;
+}
+
+export function updateGuestProfile(id: string, data: Partial<GuestProfile>): void {
+  const profiles = getGuestProfiles();
+  const idx = profiles.findIndex(p => p.id === id);
+  if (idx !== -1) {
+    profiles[idx] = { ...profiles[idx], ...data };
+    saveProfiles(profiles);
+  }
+}
+
+export function addGuestReceipt(profileId: string, receipt: GuestProfile['receipts'][0]): void {
+  const profiles = getGuestProfiles();
+  const idx = profiles.findIndex(p => p.id === profileId);
+  if (idx !== -1) {
+    profiles[idx].receipts.push(receipt);
+    saveProfiles(profiles);
+  }
 }
 
 // ==================== ANALYTICS ====================

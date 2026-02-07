@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { getCheckInRecords, checkInGuest, checkOutGuest, CheckInRecord } from '@/lib/erpData';
-import { LogIn, LogOut, Clock } from 'lucide-react';
+import { GuestProfileCard } from './GuestProfileCard';
+import { LogIn, LogOut, User } from 'lucide-react';
 
 export function CheckInOutModule() {
   const { toast } = useToast();
@@ -60,6 +61,7 @@ export function CheckInOutModule() {
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
+                  <GuestProfileCard guestName={r.guest_name} />
                   {showCheckIn && (
                     <Button size="sm" onClick={() => handleCheckIn(r.id, r.guest_name)}>
                       <LogIn className="h-4 w-4 mr-1" />Check In
