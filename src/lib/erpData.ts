@@ -179,6 +179,10 @@ export function checkOutGuest(id: string): void {
   updateCheckIn(id, { status: 'checked_out', checked_out_at: new Date().toISOString() });
 }
 
+export function reassignRoom(checkInId: string, newRoomId: string, newRoomNumber: string): void {
+  updateCheckIn(checkInId, { room_id: newRoomId, room_number: newRoomNumber });
+}
+
 // ==================== HOUSEKEEPING ====================
 
 const HOUSEKEEPING_KEY = 'erp_housekeeping';
