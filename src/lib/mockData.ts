@@ -64,7 +64,7 @@ const descriptionsByType: Record<RoomType, string> = {
 function generateRooms(): Room[] {
   const rooms: Room[] = [];
   const types: RoomType[] = ['standard', 'deluxe', 'executive', 'suite', 'presidential'];
-  const distribution = { standard: 60, deluxe: 40, executive: 25, suite: 15, presidential: 10 };
+  const distribution = { standard: 100, deluxe: 60, executive: 45, suite: 30, presidential: 15 };
   
   let roomNumber = 101;
   
