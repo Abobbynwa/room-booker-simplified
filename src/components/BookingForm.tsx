@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Room } from '@/types/hotel';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, differenceInDays } from 'date-fns';
-import { CalendarIcon, Copy, Check } from 'lucide-react';
+import { CalendarIcon, Copy, Check, Upload, X, FileImage } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { paymentDetails } from '@/lib/api';
 import { submitBooking } from '@/lib/backend-api';
@@ -28,6 +28,9 @@ export function BookingForm({ room }: BookingFormProps) {
   const [guestPhone, setGuestPhone] = useState('');
   const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
   const totalAmount = nights * room.price_per_night;
@@ -44,6 +47,36 @@ export function BookingForm({ room }: BookingFormProps) {
     await navigator.clipboard.writeText(text);
     setCopiedAccount(accountId);
     setTimeout(() => setCopiedAccount(null), 2000);
+  };
+
+  const handleReceiptSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: 'Invalid File', description: 'Please upload an image or PDF.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File Too Large', description: 'Max 5MB allowed.', variant: 'destructive' });
+      return;
+    }
+
+    setReceiptFile(file);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => setReceiptPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setReceiptPreview(null);
+    }
+  };
+
+  const removeReceipt = () => {
+    setReceiptFile(null);
+    setReceiptPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,6 +283,54 @@ export function BookingForm({ room }: BookingFormProps) {
               <p className="text-sm"><span className="text-muted-foreground">Account Number:</span> {payment.accountNumber}</p>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-serif">Payment Receipt</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Upload a screenshot or photo of your transfer receipt (optional)
+          </p>
+        </CardHeader>
+        <CardContent>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleReceiptSelect}
+            accept="image/*,.pdf"
+            className="hidden"
+          />
+
+          {receiptFile ? (
+            <div className="border border-border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileImage className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <span className="text-sm truncate">{receiptFile.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    ({(receiptFile.size / 1024).toFixed(0)} KB)
+                  </span>
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={removeReceipt}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              {receiptPreview && (
+                <img src={receiptPreview} alt="Receipt preview" className="max-h-40 rounded-md object-contain mx-auto" />
+              )}
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-dashed border-2 h-24 flex flex-col gap-1"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Click to upload receipt</span>
+            </Button>
+          )}
         </CardContent>
       </Card>
 
