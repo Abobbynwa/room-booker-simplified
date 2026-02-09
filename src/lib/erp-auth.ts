@@ -57,6 +57,11 @@ export function hasAccess(role: string, module: string): boolean {
   return ROLE_ACCESS[key]?.includes(module) ?? false;
 }
 
+export function getRoleModules(role: string): string[] {
+  const key = role?.toLowerCase() || "";
+  return ROLE_ACCESS[key] || [];
+}
+
 export function setERPViewAsRole(role: string | null) {
   if (!role) {
     localStorage.removeItem(ERP_VIEW_AS_ROLE_KEY);

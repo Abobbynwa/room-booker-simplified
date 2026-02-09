@@ -9,13 +9,14 @@ import { HousekeepingModule } from '@/components/erp/HousekeepingModule';
 import { StaffModule } from '@/components/erp/StaffModule';
 import { AnalyticsModule } from '@/components/erp/AnalyticsModule';
 import { SettingsModule } from '@/components/erp/SettingsModule';
-import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth, getEffectiveRole, setERPViewAsRole, getERPViewAsRole } from '@/lib/erp-auth';
+import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth, getEffectiveRole, setERPViewAsRole, getERPViewAsRole, getRoleModules } from '@/lib/erp-auth';
 import { erpMe } from '@/lib/erp-api';
 import { Loader2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROLE_OPTIONS } from '@/lib/erp-constants';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ERPDashboard = () => {
   const navigate = useNavigate();
@@ -127,6 +128,23 @@ const ERPDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+          )}
+          {user.role === 'admin' && viewAsRole && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-base">Role Preview</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <div className="text-muted-foreground mb-2">
+                  {`Modules visible to ${ROLE_OPTIONS.find(r => r.value === viewAsRole)?.label || viewAsRole}`}
+                </div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {getRoleModules(viewAsRole).map(m => (
+                    <li key={m} className="capitalize">{m.replace("-", " ")}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           )}
           {renderModule()}
         </main>
