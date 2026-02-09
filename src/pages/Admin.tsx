@@ -178,6 +178,17 @@ const Admin = () => {
                 Signed in and connected to live backend.
               </CardContent>
             </Card>
+            <Card className="md:col-span-3">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">ERP Access</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
+                <div>Admin can access the full ERP interface using the same admin credentials.</div>
+                <Button className="w-fit" onClick={() => window.open('/#/erp/login', '_blank')}>
+                  Open ERP
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           <Tabs defaultValue="bookings">
