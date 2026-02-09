@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { getERPToken } from '@/lib/erp-auth';
 import { erpListGuests, erpCreateGuest, erpUpdateGuest, erpAddReceipt, erpListReceipts, erpDeleteReceipt } from '@/lib/erp-api';
+import { uploadGuestReceipt } from '@/lib/erp-upload';
 import { User, Mail, Phone, FileText, Upload, X, Heart, StickyNote, Receipt } from 'lucide-react';
 
 const PREFERENCE_OPTIONS = [
@@ -107,16 +108,15 @@ export function GuestProfileCard({ guestName, trigger }: GuestProfileCardProps) 
       toast({ title: 'File too large', description: 'Max 5MB', variant: 'destructive' });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = async () => {
+    (async () => {
       const token = getERPToken();
       if (!token) return;
-      await erpAddReceipt(token, profile.id, { name: file.name, data_url: reader.result as string });
+      const url = await uploadGuestReceipt(String(profile.id), file);
+      await erpAddReceipt(token, profile.id, { name: file.name, data_url: url });
       const r = await erpListReceipts(token, profile.id);
       setReceipts(r as GuestReceipt[]);
       toast({ title: 'Receipt uploaded' });
-    };
-    reader.readAsDataURL(file);
+    })();
     e.target.value = '';
   };
 

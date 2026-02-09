@@ -7,6 +7,7 @@ from ..db_core import get_session
 from ..models import (
     AdminUser,
     StaffMember,
+    StaffDocument,
     GuestProfile,
     GuestReceipt,
     CheckInRecord,
@@ -33,6 +34,7 @@ from ..schemas import (
     FloorPlanItemUpdate,
     BookingStatusUpdate,
     PaymentProofUpdate,
+    StaffDocumentCreate,
 )
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
 
@@ -247,6 +249,43 @@ def delete_staff(staff_id: int, user: dict = Depends(_get_current_erp_user), ses
     session.delete(staff)
     session.commit()
     return {"message": "Staff deleted"}
+
+
+@router.get("/staff/{staff_id}/documents")
+def list_staff_documents(staff_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_admin(user)
+    return session.exec(select(StaffDocument).where(StaffDocument.staff_id == staff_id)).all()
+
+
+@router.post("/staff/{staff_id}/documents")
+def add_staff_document(
+    staff_id: int,
+    payload: StaffDocumentCreate,
+    user: dict = Depends(_get_current_erp_user),
+    session: Session = Depends(get_session),
+):
+    _require_admin(user)
+    doc = StaffDocument(staff_id=staff_id, name=payload.name, url=payload.url)
+    session.add(doc)
+    session.commit()
+    session.refresh(doc)
+    return doc
+
+
+@router.delete("/staff/{staff_id}/documents/{doc_id}")
+def delete_staff_document(
+    staff_id: int,
+    doc_id: int,
+    user: dict = Depends(_get_current_erp_user),
+    session: Session = Depends(get_session),
+):
+    _require_admin(user)
+    doc = session.get(StaffDocument, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    session.delete(doc)
+    session.commit()
+    return {"message": "Document deleted"}
 
 
 # Guests + receipts

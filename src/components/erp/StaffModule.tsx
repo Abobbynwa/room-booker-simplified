@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff } from '@/lib/erp-api';
+import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff, erpListStaffDocuments, erpAddStaffDocument, erpDeleteStaffDocument } from '@/lib/erp-api';
 import { getERPToken } from '@/lib/erp-auth';
+import { uploadStaffDocument } from '@/lib/erp-upload';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 const formatSalary = (s: number) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(s);
@@ -27,11 +28,16 @@ type StaffMember = {
   hired_at?: string | null;
 };
 
+type StaffDocument = { id: number; name: string; url: string; uploaded_at: string };
+
 export function StaffModule() {
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'Receptionist', department: 'Reception', shift: 'morning' as const, status: 'active' as const, salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [activeStaff, setActiveStaff] = useState<StaffMember | null>(null);
+  const [documents, setDocuments] = useState<StaffDocument[]>([]);
 
   const refresh = async () => {
     const token = getERPToken();
@@ -61,6 +67,34 @@ export function StaffModule() {
     await erpDeleteStaff(token, id); 
     toast({ title: 'Staff removed' }); 
     refresh(); 
+  };
+
+  const openDocuments = async (member: StaffMember) => {
+    const token = getERPToken();
+    if (!token) return;
+    setActiveStaff(member);
+    const docs = await erpListStaffDocuments(token, member.id);
+    setDocuments(docs as StaffDocument[]);
+    setDocsOpen(true);
+  };
+
+  const handleDocUpload = async (file: File) => {
+    if (!activeStaff) return;
+    const token = getERPToken();
+    if (!token) return;
+    const url = await uploadStaffDocument(String(activeStaff.id), file);
+    await erpAddStaffDocument(token, activeStaff.id, { name: file.name, url });
+    const docs = await erpListStaffDocuments(token, activeStaff.id);
+    setDocuments(docs as StaffDocument[]);
+  };
+
+  const handleDocDelete = async (docId: number) => {
+    if (!activeStaff) return;
+    const token = getERPToken();
+    if (!token) return;
+    await erpDeleteStaffDocument(token, activeStaff.id, docId);
+    const docs = await erpListStaffDocuments(token, activeStaff.id);
+    setDocuments(docs as StaffDocument[]);
   };
 
   const toggleStatus = async (s: StaffMember) => {
@@ -150,6 +184,9 @@ export function StaffModule() {
                         <Button size="sm" variant="ghost" onClick={() => toggleStatus(s)}>
                           {s.status === 'active' ? 'Deactivate' : 'Activate'}
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openDocuments(s)}>
+                          Documents
+                        </Button>
                         <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -162,6 +199,43 @@ export function StaffModule() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Staff Documents</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              {activeStaff ? `${activeStaff.name} (${activeStaff.email})` : ''}
+            </div>
+            <label className="text-sm cursor-pointer">
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) handleDocUpload(e.target.files[0]);
+                  e.currentTarget.value = '';
+                }}
+              />
+              Upload document
+            </label>
+            {documents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+            ) : (
+              <div className="space-y-2">
+                {documents.map(d => (
+                  <div key={d.id} className="flex items-center justify-between text-sm">
+                    <a className="underline" href={d.url} target="_blank" rel="noreferrer">{d.name}</a>
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDocDelete(d.id)}>Delete</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

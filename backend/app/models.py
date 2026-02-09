@@ -68,6 +68,13 @@ class StaffMember(SQLModel, table=True):
     password_hash: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class StaffDocument(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    staff_id: int
+    name: str
+    url: str
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+
 class GuestProfile(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     guest_name: str

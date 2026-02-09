@@ -170,3 +170,7 @@ class FloorPlanItemUpdate(BaseModel):
     width: float | None = None
     height: float | None = None
     floor: str | None = None
+
+class StaffDocumentCreate(BaseModel):
+    name: str
+    url: str

@@ -146,3 +146,15 @@ export function erpReportSummary(token: string) {
 export function erpListPaymentAccounts(token: string) {
   return api<any[]>("/api/erp/payment-accounts", token);
 }
+
+export function erpListStaffDocuments(token: string, staffId: number) {
+  return api<any[]>(`/api/erp/staff/${staffId}/documents`, token);
+}
+
+export function erpAddStaffDocument(token: string, staffId: number, payload: any) {
+  return api(`/api/erp/staff/${staffId}/documents`, token, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function erpDeleteStaffDocument(token: string, staffId: number, docId: number) {
+  return api(`/api/erp/staff/${staffId}/documents/${docId}`, token, { method: "DELETE" });
+}

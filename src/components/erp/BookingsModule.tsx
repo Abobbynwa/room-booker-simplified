@@ -5,8 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { erpListBookings, erpUpdateBookingStatus } from '@/lib/erp-api';
+import { erpListBookings, erpUpdateBookingStatus, erpUpdatePaymentProof } from '@/lib/erp-api';
 import { getERPToken } from '@/lib/erp-auth';
+import { uploadPaymentProof } from '@/lib/erp-upload';
 import { Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -59,6 +60,15 @@ export function BookingsModule() {
   const viewProof = (proof: string | null | undefined) => {
     if (!proof) return;
     setProofUrl(proof);
+  };
+
+  const handleProofUpload = async (bookingId: number, file: File) => {
+    const token = getERPToken();
+    if (!token) return;
+    const url = await uploadPaymentProof(String(bookingId), file);
+    await erpUpdatePaymentProof(token, bookingId, { payment_proof: url });
+    toast({ title: 'Payment proof uploaded' });
+    refresh();
   };
 
   const filtered = filter === 'all' ? bookings : bookings.filter(b => b.status === filter);
@@ -146,9 +156,18 @@ export function BookingsModule() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button size="sm" variant="ghost" className="text-muted-foreground" disabled>
-                          —
-                        </Button>
+                        <label className="text-xs text-muted-foreground cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) handleProofUpload(b.id, e.target.files[0]);
+                              e.currentTarget.value = '';
+                            }}
+                          />
+                          Upload Proof
+                        </label>
                       </TableCell>
                     </TableRow>
                   );
