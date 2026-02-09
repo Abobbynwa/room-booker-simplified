@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
 import os
 import os
 from sqlmodel import Session, select
@@ -24,6 +24,7 @@ import csv
 import io
 from openpyxl import Workbook
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
+from ..utils.email import send_email
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -177,6 +178,7 @@ def update_booking_status(
     payload: BookingStatusUpdate,
     session: Session = Depends(get_session),
     admin=Depends(get_current_admin),
+    background_tasks: BackgroundTasks,
 ):
     meta = session.exec(select(BookingMeta).where(BookingMeta.booking_id == booking_id)).first()
     if not meta:
@@ -187,6 +189,19 @@ def update_booking_status(
     session.add(meta)
     session.commit()
     session.refresh(meta)
+    if payload.payment_status == "paid":
+        booking = session.get(Booking, booking_id)
+        if booking:
+            subject = "Payment confirmed"
+            body = (
+                f"<p>Hi {booking.name},</p>"
+                f"<p>Your payment has been confirmed. Your booking is now marked as paid.</p>"
+                f"<p><strong>Room:</strong> {booking.room_type}</p>"
+                f"<p><strong>Check In:</strong> {booking.check_in}</p>"
+                f"<p><strong>Check Out:</strong> {booking.check_out}</p>"
+                f"<p>Thank you for choosing us.</p>"
+            )
+            background_tasks.add_task(send_email, booking.email, subject, body)
     return {"message": "Booking status updated"}
 
 @router.post("/bookings/{booking_id}/payment-proof")
