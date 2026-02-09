@@ -7,6 +7,7 @@ class BookingCreate(BaseModel):
     room_type: str
     check_in: date
     check_out: date
+    payment_proof: str | None = None
 
 class ContactCreate(BaseModel):
     name: str

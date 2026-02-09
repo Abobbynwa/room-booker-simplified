@@ -33,6 +33,13 @@ export async function uploadPaymentProof(bookingId: string, file: File): Promise
   return uploadToBucket(PAYMENT_BUCKET, path, file);
 }
 
+export async function uploadPublicPaymentProof(guestEmail: string, file: File): Promise<string> {
+  const safeName = file.name.replace(/\s+/g, "-");
+  const emailSafe = guestEmail.replace(/[^a-zA-Z0-9]/g, "_");
+  const path = `public/${emailSafe}/${Date.now()}-${safeName}`;
+  return uploadToBucket(PAYMENT_BUCKET, path, file);
+}
+
 export async function uploadStaffDocument(staffId: string, file: File): Promise<string> {
   const safeName = file.name.replace(/\s+/g, "-");
   const path = `staff/${staffId}/${Date.now()}-${safeName}`;

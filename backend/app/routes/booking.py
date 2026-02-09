@@ -22,6 +22,9 @@ def submit_booking(
 
     # Create metadata row for ERP status tracking
     meta = BookingMeta(booking_id=b.id)
+    if booking.payment_proof:
+        meta.payment_proof = booking.payment_proof
+        meta.payment_status = "pending"
     session.add(meta)
     session.commit()
 

@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { changeAdminPassword, fetchAdminBookings, fetchAdminMessages } from '@/lib/backend-api';
+import { changeAdminPassword, fetchAdminBookings, fetchAdminMessages, updateAdminBookingStatus } from '@/lib/backend-api';
 import { Loader2, LogOut, RefreshCcw, ShieldCheck, Mail, ClipboardList } from 'lucide-react';
 
 type AdminBooking = {
@@ -21,6 +21,9 @@ type AdminBooking = {
   check_in: string;
   check_out: string;
   created_at: string;
+  status?: string;
+  payment_status?: string;
+  payment_proof?: string | null;
 };
 
 type AdminMessage = {
@@ -43,6 +46,7 @@ const Admin = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+  const [savingBooking, setSavingBooking] = useState<number | null>(null);
 
   const handleSignOut = async () => {
     await signOut();
@@ -114,6 +118,24 @@ const Admin = () => {
       });
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleBookingUpdate = async (booking: AdminBooking, status: string, payment_status?: string) => {
+    if (!token) return;
+    setSavingBooking(booking.id);
+    try {
+      await updateAdminBookingStatus(token, booking.id, { status, payment_status });
+      toast({ title: 'Booking updated' });
+      await loadBookings();
+    } catch (error) {
+      toast({
+        title: 'Update failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingBooking(null);
     }
   };
 
@@ -220,23 +242,46 @@ const Admin = () => {
                           <TableHead>Email</TableHead>
                           <TableHead>Room Type</TableHead>
                           <TableHead>Check In</TableHead>
-                          <TableHead>Check Out</TableHead>
-                          <TableHead>Created</TableHead>
+                        <TableHead>Check Out</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead>Proof</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bookings.map((booking) => (
+                        <TableRow key={booking.id}>
+                          <TableCell>{booking.id}</TableCell>
+                          <TableCell>{booking.name}</TableCell>
+                          <TableCell>{booking.email}</TableCell>
+                          <TableCell>{booking.room_type}</TableCell>
+                          <TableCell>{booking.check_in}</TableCell>
+                          <TableCell>{booking.check_out}</TableCell>
+                          <TableCell>{booking.created_at}</TableCell>
+                          <TableCell className="capitalize">{booking.payment_status || 'unpaid'}</TableCell>
+                          <TableCell>
+                            {booking.payment_proof ? (
+                              <a href={booking.payment_proof} target="_blank" rel="noreferrer" className="text-primary text-xs">
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">None</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={savingBooking === booking.id}
+                              onClick={() => handleBookingUpdate(booking, booking.status || 'pending', 'paid')}
+                            >
+                              Mark Paid
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bookings.map((booking) => (
-                          <TableRow key={booking.id}>
-                            <TableCell>{booking.id}</TableCell>
-                            <TableCell>{booking.name}</TableCell>
-                            <TableCell>{booking.email}</TableCell>
-                            <TableCell>{booking.room_type}</TableCell>
-                            <TableCell>{booking.check_in}</TableCell>
-                            <TableCell>{booking.check_out}</TableCell>
-                            <TableCell>{booking.created_at}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
+                      ))}
+                    </TableBody>
                     </Table>
                   )}
                 </CardContent>

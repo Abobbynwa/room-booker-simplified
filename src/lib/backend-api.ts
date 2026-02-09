@@ -13,6 +13,7 @@ interface BookingPayload {
   room_type: string;
   check_in: string;
   check_out: string;
+  payment_proof?: string | null;
 }
 
 interface ContactPayload {
@@ -175,6 +176,28 @@ export async function changeAdminPassword(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Password update failed' }));
     throw new Error(error.detail || 'Password update failed');
+  }
+
+  return response.json();
+}
+
+export async function updateAdminBookingStatus(
+  token: string,
+  bookingId: number,
+  payload: { status: string; payment_status?: string }
+): Promise<{ message: string }> {
+  const response = await fetch(`${BACKEND_URL}/api/admin/bookings/${bookingId}/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Update failed' }));
+    throw new Error(error.detail || 'Update failed');
   }
 
   return response.json();

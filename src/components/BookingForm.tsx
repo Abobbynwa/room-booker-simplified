@@ -12,6 +12,7 @@ import { CalendarIcon, Copy, Check, Upload, X, FileImage } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { paymentDetails } from '@/lib/api';
 import { submitBooking } from '@/lib/backend-api';
+import { uploadPublicPaymentProof } from '@/lib/erp-upload';
 import { useToast } from '@/hooks/use-toast';
 
 interface BookingFormProps {
@@ -103,6 +104,11 @@ export function BookingForm({ room }: BookingFormProps) {
     setIsSubmitting(true);
 
     try {
+      let paymentProofUrl: string | null = null;
+      if (receiptFile) {
+        paymentProofUrl = await uploadPublicPaymentProof(guestEmail, receiptFile);
+      }
+
       // Submit to backend FastAPI
       await submitBooking({
         name: guestName,
@@ -110,6 +116,7 @@ export function BookingForm({ room }: BookingFormProps) {
         room_type: room.type,
         check_in: format(checkIn, 'yyyy-MM-dd'),
         check_out: format(checkOut, 'yyyy-MM-dd'),
+        payment_proof: paymentProofUrl,
       });
 
       toast({
