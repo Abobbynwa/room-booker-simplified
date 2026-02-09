@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlmodel import Session, select
+from sqlalchemy import func
 from typing import Optional
 from datetime import datetime
 
@@ -65,16 +66,23 @@ def erp_login(payload: ERPLogin, session: Session = Depends(get_session)):
             token = create_access_token({"sub": admin.email, "role": "admin", "name": admin.email})
             return {"access_token": token, "user": {"email": admin.email, "role": "admin", "name": admin.email}}
 
-    # Staff login (role + staff_code, no password)
-    if payload.role and payload.staff_code:
+    # Staff login (role + password, no staff ID)
+    if payload.role and payload.password and not payload.email:
         role = payload.role.lower()
-        staff = session.exec(
-            select(StaffMember).where(StaffMember.staff_code == payload.staff_code)
-        ).first()
-        if not staff or (staff.role or "").lower() != role:
-            raise HTTPException(status_code=401, detail="Invalid staff ID")
-        if staff.status != "active":
-            raise HTTPException(status_code=403, detail="Staff account inactive")
+        staff_list = session.exec(
+            select(StaffMember).where(func.lower(StaffMember.role) == role)
+        ).all()
+        matches = []
+        for staff in staff_list:
+            if staff.status != "active":
+                continue
+            if staff.password_hash and verify_password(payload.password, staff.password_hash):
+                matches.append(staff)
+        if len(matches) == 0:
+            raise HTTPException(status_code=401, detail="Invalid role or password")
+        if len(matches) > 1:
+            raise HTTPException(status_code=409, detail="Multiple staff match this role/password. Ask admin to reset passwords.")
+        staff = matches[0]
         token = create_access_token({"sub": staff.email, "role": role, "name": staff.name})
         return {"access_token": token, "user": {"email": staff.email, "role": role, "name": staff.name}}
 

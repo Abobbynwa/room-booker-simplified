@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface ERPSidebarProps {
   user: ERPUser;
+  effectiveRole: string;
   activeModule: string;
   onModuleChange: (module: string) => void;
   onSignOut: () => void;
@@ -23,19 +24,19 @@ const modules = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export function ERPSidebar({ user, activeModule, onModuleChange, onSignOut }: ERPSidebarProps) {
+export function ERPSidebar({ user, effectiveRole, activeModule, onModuleChange, onSignOut }: ERPSidebarProps) {
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col min-h-screen">
       <div className="p-4 border-b border-border">
         <h2 className="text-lg font-serif font-bold text-gold">Hotel ERP</h2>
         <p className="text-xs text-muted-foreground mt-1">{user.name}</p>
         <Badge variant="outline" className="mt-1 text-xs capitalize">
-          {user.role}
+          {effectiveRole === "admin" ? "Admin" : effectiveRole.replace("_", " ")}
         </Badge>
       </div>
       
       <nav className="flex-1 p-2 space-y-1">
-        {modules.filter(m => hasAccess(user.role, m.id)).map(m => (
+        {modules.filter(m => hasAccess(effectiveRole, m.id)).map(m => (
           <button
             key={m.id}
             onClick={() => onModuleChange(m.id)}

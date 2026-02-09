@@ -54,6 +54,7 @@ export function StaffModule() {
 
   const handleCreate = async () => {
     if (!form.name || !form.email) { toast({ title: 'Name and email required', variant: 'destructive' }); return; }
+    if (!form.password) { toast({ title: 'Password required', variant: 'destructive' }); return; }
     const token = getERPToken();
     if (!token) return;
     const created = await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0 });
@@ -165,7 +166,7 @@ export function StaffModule() {
                 </div>
                 <div><Label>Salary (₦)</Label><Input type="number" value={form.salary} onChange={e => setForm({ ...form, salary: e.target.value })} /></div>
               </div>
-              <div><Label>Password (optional)</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
+              <div><Label>Password (required)</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
               <Button onClick={handleCreate} className="w-full">Add Staff Member</Button>
             </div>
           </DialogContent>
@@ -210,6 +211,16 @@ export function StaffModule() {
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => openDocuments(s)}>
                           Documents
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
+                          const newPassword = window.prompt("Set new staff password");
+                          if (!newPassword) return;
+                          const token = getERPToken();
+                          if (!token) return;
+                          await erpUpdateStaff(token, s.id, { password: newPassword });
+                          toast({ title: 'Password updated' });
+                        }}>
+                          Reset Password
                         </Button>
                         <Button size="sm" variant="ghost" onClick={async () => {
                           const token = getERPToken();

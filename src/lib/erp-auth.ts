@@ -6,6 +6,7 @@ export type ERPUser = {
 
 const ERP_TOKEN_KEY = "erp_token";
 const ERP_USER_KEY = "erp_user";
+const ERP_VIEW_AS_ROLE_KEY = "erp_view_as_role";
 
 export function setERPAuth(token: string, user: ERPUser) {
   localStorage.setItem(ERP_TOKEN_KEY, token);
@@ -24,6 +25,7 @@ export function getERPUser(): ERPUser | null {
 export function clearERPAuth() {
   localStorage.removeItem(ERP_TOKEN_KEY);
   localStorage.removeItem(ERP_USER_KEY);
+  localStorage.removeItem(ERP_VIEW_AS_ROLE_KEY);
 }
 
 const ROLE_ACCESS: Record<string, string[]> = {
@@ -53,4 +55,21 @@ const ROLE_ACCESS: Record<string, string[]> = {
 export function hasAccess(role: string, module: string): boolean {
   const key = role?.toLowerCase() || "";
   return ROLE_ACCESS[key]?.includes(module) ?? false;
+}
+
+export function setERPViewAsRole(role: string | null) {
+  if (!role) {
+    localStorage.removeItem(ERP_VIEW_AS_ROLE_KEY);
+    return;
+  }
+  localStorage.setItem(ERP_VIEW_AS_ROLE_KEY, role);
+}
+
+export function getERPViewAsRole(): string | null {
+  return localStorage.getItem(ERP_VIEW_AS_ROLE_KEY);
+}
+
+export function getEffectiveRole(user: ERPUser): string {
+  if (user.role !== "admin") return user.role;
+  return getERPViewAsRole() || "admin";
 }

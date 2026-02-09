@@ -27,10 +27,10 @@ export function erpLogin(email: string, password: string) {
   });
 }
 
-export function erpStaffLogin(role: string, staff_code: string) {
+export function erpStaffLogin(role: string, password: string) {
   return api<ERPLoginResponse>("/api/erp/login", undefined, {
     method: "POST",
-    body: JSON.stringify({ role, staff_code }),
+    body: JSON.stringify({ role, password }),
   });
 }
 

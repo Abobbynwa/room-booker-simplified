@@ -17,7 +17,7 @@ const ERPLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('receptionist');
-  const [staffCode, setStaffCode] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
   const [mode, setMode] = useState<'staff' | 'admin'>('staff');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -33,14 +33,14 @@ const ERPLogin = () => {
     if (mode === 'admin') {
       if (!email || !password) { toast({ title: 'Enter email and password', variant: 'destructive' }); return; }
     } else {
-      if (!role || !staffCode) { toast({ title: 'Select role and enter staff ID', variant: 'destructive' }); return; }
+      if (!role || !staffPassword) { toast({ title: 'Select role and enter password', variant: 'destructive' }); return; }
     }
     setIsSubmitting(true);
     
     try {
       const result = mode === 'admin'
         ? await erpLogin(email, password)
-        : await erpStaffLogin(role, staffCode);
+        : await erpStaffLogin(role, staffPassword);
       setERPAuth(result.access_token, result.user);
       toast({ title: 'Welcome back!', description: `Signed in as ${result.user.role}` });
       navigate('/erp');
@@ -94,8 +94,8 @@ const ERPLogin = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="staff_code">Staff ID</Label>
-                    <Input id="staff_code" placeholder="STAFF ID" value={staffCode} onChange={e => setStaffCode(e.target.value)} />
+                    <Label htmlFor="staff_password">Password</Label>
+                    <Input id="staff_password" type="password" placeholder="Password from admin" value={staffPassword} onChange={e => setStaffPassword(e.target.value)} />
                   </div>
                 </>
               )}

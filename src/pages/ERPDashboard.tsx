@@ -9,11 +9,13 @@ import { HousekeepingModule } from '@/components/erp/HousekeepingModule';
 import { StaffModule } from '@/components/erp/StaffModule';
 import { AnalyticsModule } from '@/components/erp/AnalyticsModule';
 import { SettingsModule } from '@/components/erp/SettingsModule';
-import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth } from '@/lib/erp-auth';
+import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth, getEffectiveRole, setERPViewAsRole, getERPViewAsRole } from '@/lib/erp-auth';
 import { erpMe } from '@/lib/erp-api';
 import { Loader2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ROLE_OPTIONS } from '@/lib/erp-constants';
 
 const ERPDashboard = () => {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ const ERPDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeModule, setActiveModule] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [viewAsRole, setViewAsRole] = useState<string | null>(getERPViewAsRole());
 
   useEffect(() => {
     const u = getERPUser();
@@ -48,7 +51,8 @@ const ERPDashboard = () => {
   };
 
   const handleModuleChange = (module: string) => {
-    if (user && !hasAccess(user.role, module)) {
+    const effectiveRole = user ? getEffectiveRole(user) : "";
+    if (user && !hasAccess(effectiveRole, module)) {
       toast({ title: 'Access denied', description: 'You don\'t have permission for this module', variant: 'destructive' });
       return;
     }
@@ -83,7 +87,7 @@ const ERPDashboard = () => {
 
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <ERPSidebar user={user} activeModule={activeModule} onModuleChange={handleModuleChange} onSignOut={handleSignOut} />
+        <ERPSidebar user={user} effectiveRole={getEffectiveRole(user)} activeModule={activeModule} onModuleChange={handleModuleChange} onSignOut={handleSignOut} />
       </div>
 
       {/* Main content */}
@@ -98,6 +102,32 @@ const ERPDashboard = () => {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
+          {user.role === 'admin' && (
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <div className="text-xs text-muted-foreground">View as role</div>
+              <Select
+                value={viewAsRole || "admin"}
+                onValueChange={(value) => {
+                  const role = value === "admin" ? null : value;
+                  setViewAsRole(role);
+                  setERPViewAsRole(role);
+                  if (role && !hasAccess(role, activeModule)) {
+                    setActiveModule('dashboard');
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue placeholder="Admin (full access)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin (full access)</SelectItem>
+                  {ROLE_OPTIONS.map(r => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {renderModule()}
         </main>
       </div>
