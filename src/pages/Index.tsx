@@ -1,10 +1,21 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Crown, Star, Wifi, Car, Utensils, Waves } from "lucide-react";
+import { Crown, Star, Wifi, Car, Utensils, Waves, Clock3, CalendarDays } from "lucide-react";
 
 const Index = () => {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000 * 30);
+    return () => clearInterval(id);
+  }, []);
+
+  const timeLabel = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
   const amenities = [
     { icon: Wifi, label: "Free WiFi" },
     { icon: Car, label: "Free Parking" },
@@ -17,30 +28,43 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: "url('https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')",
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-secondary/80 via-secondary/60 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-secondary/80 via-secondary/50 to-background" />
+          <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
         </div>
         
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <div className="flex items-center justify-center gap-2 mb-6">
             <Crown className="h-8 w-8 text-primary" />
-            <span className="text-primary font-serif text-lg tracking-widest uppercase">Luxury Awaits</span>
+            <span className="text-primary font-serif text-lg tracking-widest uppercase">Abobby Nwa Suite</span>
             <Crown className="h-8 w-8 text-primary" />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/80 px-4 py-1 text-sm">
+              <CalendarDays className="h-4 w-4 text-primary" />
+              {dateLabel}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/80 px-4 py-1 text-sm">
+              <Clock3 className="h-4 w-4 text-primary" />
+              {timeLabel}
+            </span>
           </div>
           
           <h1 className="font-serif text-5xl md:text-7xl text-foreground mb-6 leading-tight">
-            Experience Unparalleled <span className="text-primary">Elegance</span>
+            A Softer Kind of <span className="text-primary">Luxury</span>
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Discover 150 exquisitely designed rooms, where every detail speaks of luxury 
-            and every moment becomes an unforgettable memory.
+            Wake up to warm light, calm spaces, and thoughtful details.  
+            Designed for comfort, curated for memorable stays.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -59,10 +83,10 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-4">
-              World-Class Amenities
+              Comfort, Thoughtfully Curated
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Every guest deserves the finest. Enjoy our premium facilities designed for your comfort.
+              Everything you need, nothing you don’t. A quiet, refined stay from check‑in to checkout.
             </p>
           </div>
           
@@ -84,11 +108,10 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-4">
-              Our Accommodations
+              Rooms That Feel Like Home
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              From cozy standard rooms to our magnificent Presidential Suite, 
-              find your perfect retreat.
+              From simple elegance to indulgent suites, choose what fits your mood.
             </p>
           </div>
           
@@ -138,11 +161,10 @@ const Index = () => {
       <section className="py-20 bg-secondary">
         <div className="container mx-auto px-4 text-center">
           <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-4">
-            Ready to Experience Luxury?
+            Ready for a Soft Landing?
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-            Book your stay today and let us exceed your expectations. 
-            Simple bank transfer payment, no hassle.
+            Book in minutes. Pay by transfer. We’ll take it from there.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg">
