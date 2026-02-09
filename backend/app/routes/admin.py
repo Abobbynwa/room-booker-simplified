@@ -176,9 +176,9 @@ def delete_payment_account(
 def update_booking_status(
     booking_id: int,
     payload: BookingStatusUpdate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     admin=Depends(get_current_admin),
-    background_tasks: BackgroundTasks,
 ):
     meta = session.exec(select(BookingMeta).where(BookingMeta.booking_id == booking_id)).first()
     if not meta:
