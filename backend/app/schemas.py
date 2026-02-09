@@ -70,6 +70,12 @@ class StaffCreate(BaseModel):
     account_details: str | None = None
     status: str = "active"
     department: str | None = None
+    gender: str | None = None
+    house_resident: bool = False
+    state_of_origin: str | None = None
+    town: str | None = None
+    next_of_kin_name: str | None = None
+    next_of_kin_phone: str | None = None
     salary: float | None = None
     hired_at: date | None = None
     password: str | None = None
@@ -85,6 +91,12 @@ class StaffUpdate(BaseModel):
     account_details: str | None = None
     status: str | None = None
     department: str | None = None
+    gender: str | None = None
+    house_resident: bool | None = None
+    state_of_origin: str | None = None
+    town: str | None = None
+    next_of_kin_name: str | None = None
+    next_of_kin_phone: str | None = None
     salary: float | None = None
     hired_at: date | None = None
     password: str | None = None

@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff, erpListStaffDocuments, erpAddStaffDocument, erpDeleteStaffDocument, erpResetStaffCode } from '@/lib/erp-api';
 import { getERPToken } from '@/lib/erp-auth';
 import { uploadStaffDocument } from '@/lib/erp-upload';
-import { ROLE_OPTIONS, DEPARTMENT_OPTIONS, ROLE_LABELS, DEPARTMENT_LABELS } from '@/lib/erp-constants';
+import { ROLE_OPTIONS, DEPARTMENT_OPTIONS, ROLE_LABELS, DEPARTMENT_LABELS, GENDER_OPTIONS, NIGERIA_STATES } from '@/lib/erp-constants';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 const formatSalary = (s: number) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(s);
@@ -24,6 +24,12 @@ type StaffMember = {
   role: string;
   staff_code?: string | null;
   department?: string | null;
+  gender?: string | null;
+  house_resident?: boolean | null;
+  state_of_origin?: string | null;
+  town?: string | null;
+  next_of_kin_name?: string | null;
+  next_of_kin_phone?: string | null;
   shift?: string | null;
   status: string;
   salary?: number | null;
@@ -36,10 +42,29 @@ export function StaffModule() {
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'receptionist', department: 'front_office', shift: 'morning' as const, status: 'active' as const, salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'receptionist',
+    department: 'front_office',
+    gender: '',
+    house_resident: false,
+    state_of_origin: '',
+    town: '',
+    next_of_kin_name: '',
+    next_of_kin_phone: '',
+    shift: 'morning' as const,
+    status: 'active' as const,
+    salary: '',
+    hired_at: new Date().toISOString().split('T')[0],
+    password: '',
+  });
   const [docsOpen, setDocsOpen] = useState(false);
   const [activeStaff, setActiveStaff] = useState<StaffMember | null>(null);
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsStaff, setDetailsStaff] = useState<StaffMember | null>(null);
 
   const refresh = async () => {
     const token = getERPToken();
@@ -57,9 +82,26 @@ export function StaffModule() {
     if (!form.password) { toast({ title: 'Password required', variant: 'destructive' }); return; }
     const token = getERPToken();
     if (!token) return;
-    const created = await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0 });
+    const created = await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0, gender: form.gender || null, state_of_origin: form.state_of_origin || null, town: form.town || null, next_of_kin_name: form.next_of_kin_name || null, next_of_kin_phone: form.next_of_kin_phone || null });
     toast({ title: 'Staff member added', description: `Staff ID: ${created.staff_code || 'N/A'}` });
-    setForm({ name: '', email: '', phone: '', role: 'receptionist', department: 'front_office', shift: 'morning', status: 'active', salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
+    setForm({
+      name: '',
+      email: '',
+      phone: '',
+      role: 'receptionist',
+      department: 'front_office',
+      gender: '',
+      house_resident: false,
+      state_of_origin: '',
+      town: '',
+      next_of_kin_name: '',
+      next_of_kin_phone: '',
+      shift: 'morning',
+      status: 'active',
+      salary: '',
+      hired_at: new Date().toISOString().split('T')[0],
+      password: '',
+    });
     setOpen(false);
     refresh();
   };
@@ -110,6 +152,10 @@ export function StaffModule() {
   };
 
   const statusColor = (s: string) => s === 'active' ? 'default' : s === 'on_leave' ? 'secondary' : 'destructive';
+  const openDetails = (member: StaffMember) => {
+    setDetailsStaff(member);
+    setDetailsOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -150,6 +196,56 @@ export function StaffModule() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={form.gender} onValueChange={v => setForm({ ...form, gender: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map(g => (
+                        <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>House Resident</Label>
+                  <Select value={form.house_resident ? 'yes' : 'no'} onValueChange={v => setForm({ ...form, house_resident: v === 'yes' })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>State of Origin</Label>
+                  <Select value={form.state_of_origin} onValueChange={v => setForm({ ...form, state_of_origin: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                    <SelectContent>
+                      {NIGERIA_STATES.map(state => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Town</Label>
+                  <Input value={form.town} onChange={e => setForm({ ...form, town: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Next of Kin Name</Label>
+                  <Input value={form.next_of_kin_name} onChange={e => setForm({ ...form, next_of_kin_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Next of Kin Phone</Label>
+                  <Input value={form.next_of_kin_phone} onChange={e => setForm({ ...form, next_of_kin_phone: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -208,6 +304,9 @@ export function StaffModule() {
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" onClick={() => toggleStatus(s)}>
                           {s.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openDetails(s)}>
+                          Details
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => openDocuments(s)}>
                           Documents
@@ -278,6 +377,32 @@ export function StaffModule() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Staff Details</DialogTitle>
+          </DialogHeader>
+          {detailsStaff ? (
+            <div className="space-y-2 text-sm">
+              <div><span className="text-muted-foreground">Name:</span> {detailsStaff.name}</div>
+              <div><span className="text-muted-foreground">Email:</span> {detailsStaff.email}</div>
+              <div><span className="text-muted-foreground">Phone:</span> {detailsStaff.phone}</div>
+              <div><span className="text-muted-foreground">Role:</span> {ROLE_LABELS[detailsStaff.role] || ROLE_LABELS[detailsStaff.role?.toLowerCase()] || detailsStaff.role}</div>
+              <div><span className="text-muted-foreground">Department:</span> {detailsStaff.department ? (DEPARTMENT_LABELS[detailsStaff.department] || DEPARTMENT_LABELS[detailsStaff.department?.toLowerCase()] || detailsStaff.department) : '—'}</div>
+              <div><span className="text-muted-foreground">Gender:</span> {detailsStaff.gender || '—'}</div>
+              <div><span className="text-muted-foreground">House Resident:</span> {detailsStaff.house_resident ? 'Yes' : 'No'}</div>
+              <div><span className="text-muted-foreground">State of Origin:</span> {detailsStaff.state_of_origin || '—'}</div>
+              <div><span className="text-muted-foreground">Town:</span> {detailsStaff.town || '—'}</div>
+              <div><span className="text-muted-foreground">Next of Kin:</span> {detailsStaff.next_of_kin_name || '—'}</div>
+              <div><span className="text-muted-foreground">Next of Kin Phone:</span> {detailsStaff.next_of_kin_phone || '—'}</div>
+              <div><span className="text-muted-foreground">Staff ID:</span> {detailsStaff.staff_code || '—'}</div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No staff selected.</div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

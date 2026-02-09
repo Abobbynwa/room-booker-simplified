@@ -60,6 +60,12 @@ class StaffMember(SQLModel, table=True):
     role: str
     staff_code: Optional[str] = None
     department: Optional[str] = None
+    gender: Optional[str] = None
+    house_resident: bool = False
+    state_of_origin: Optional[str] = None
+    town: Optional[str] = None
+    next_of_kin_name: Optional[str] = None
+    next_of_kin_phone: Optional[str] = None
     address: Optional[str] = None
     shift: Optional[str] = None
     account_details: Optional[str] = None
