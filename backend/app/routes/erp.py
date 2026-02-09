@@ -18,6 +18,7 @@ from ..models import (
     Booking,
     BookingMeta,
     PaymentAccount,
+    InventoryItem,
 )
 from ..schemas import (
     ERPLogin,
@@ -36,6 +37,8 @@ from ..schemas import (
     BookingStatusUpdate,
     PaymentProofUpdate,
     StaffDocumentCreate,
+    InventoryCreate,
+    InventoryUpdate,
 )
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
 import secrets
@@ -495,3 +498,42 @@ def delete_floorplan_item(item_id: int, user: dict = Depends(_get_current_erp_us
     session.delete(item)
     session.commit()
     return {"message": "Floor plan item deleted"}
+
+
+# Inventory
+@router.get("/inventory")
+def list_inventory(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    return session.exec(select(InventoryItem)).all()
+
+
+@router.post("/inventory")
+def create_inventory_item(payload: InventoryCreate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    item = InventoryItem(**payload.model_dump())
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+@router.put("/inventory/{item_id}")
+def update_inventory_item(item_id: int, payload: InventoryUpdate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    item = session.get(InventoryItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, key, value)
+    item.updated_at = datetime.utcnow()
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+@router.delete("/inventory/{item_id}")
+def delete_inventory_item(item_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    item = session.get(InventoryItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    session.delete(item)
+    session.commit()
+    return {"message": "Inventory item deleted"}

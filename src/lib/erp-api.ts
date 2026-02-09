@@ -130,6 +130,22 @@ export function erpDeleteFloorplan(token: string, id: number) {
   return api(`/api/erp/floorplan/${id}`, token, { method: "DELETE" });
 }
 
+export function erpListInventory(token: string) {
+  return api<any[]>("/api/erp/inventory", token);
+}
+
+export function erpCreateInventory(token: string, payload: any) {
+  return api("/api/erp/inventory", token, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function erpUpdateInventory(token: string, id: number, payload: any) {
+  return api(`/api/erp/inventory/${id}`, token, { method: "PUT", body: JSON.stringify(payload) });
+}
+
+export function erpDeleteInventory(token: string, id: number) {
+  return api(`/api/erp/inventory/${id}`, token, { method: "DELETE" });
+}
+
 export function erpListBookings(token: string) {
   return api<any[]>("/api/erp/bookings", token);
 }

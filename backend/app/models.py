@@ -130,3 +130,12 @@ class FloorPlanItem(SQLModel, table=True):
     width: float
     height: float
     floor: str = "1"
+
+class InventoryItem(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    category: str = "general"  # kitchen | bar | general
+    quantity: float = 0
+    unit: str = "pcs"
+    status: str = "available"  # available | low | out
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

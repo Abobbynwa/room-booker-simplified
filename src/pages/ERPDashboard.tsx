@@ -9,6 +9,8 @@ import { HousekeepingModule } from '@/components/erp/HousekeepingModule';
 import { StaffModule } from '@/components/erp/StaffModule';
 import { AnalyticsModule } from '@/components/erp/AnalyticsModule';
 import { SettingsModule } from '@/components/erp/SettingsModule';
+import { PaymentsModule } from '@/components/erp/PaymentsModule';
+import { InventoryModule } from '@/components/erp/InventoryModule';
 import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth, getEffectiveRole, setERPViewAsRole, getERPViewAsRole, getRoleModules } from '@/lib/erp-auth';
 import { erpMe } from '@/lib/erp-api';
 import { Loader2, Menu, X } from 'lucide-react';
@@ -72,6 +74,8 @@ const ERPDashboard = () => {
       case 'rooms': return <RoomsModule />;
       case 'check-in': return <CheckInOutModule />;
       case 'housekeeping': return <HousekeepingModule />;
+      case 'payments': return <PaymentsModule />;
+      case 'inventory': return <InventoryModule />;
       case 'staff': return <StaffModule />;
       case 'analytics': return <AnalyticsModule />;
       case 'settings': return <SettingsModule user={user} />;

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Home, Settings, Sparkles, Users, LogOut } from 'lucide-react';
+import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Home, Settings, Sparkles, Users, LogOut, Wallet, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ERPUser, hasAccess } from '@/lib/erp-auth';
 import { cn } from '@/lib/utils';
@@ -16,9 +16,11 @@ interface ERPSidebarProps {
 const modules = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'bookings', label: 'Bookings', icon: ClipboardList },
+  { id: 'payments', label: 'Payments', icon: Wallet },
   { id: 'rooms', label: 'Room Status', icon: BedDouble },
   { id: 'check-in', label: 'Check-in/Out', icon: CalendarCheck },
   { id: 'housekeeping', label: 'Housekeeping', icon: Sparkles },
+  { id: 'inventory', label: 'Inventory', icon: Boxes },
   { id: 'staff', label: 'Staff', icon: Users },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'settings', label: 'Settings', icon: Settings },

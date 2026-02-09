@@ -113,6 +113,20 @@ class ERPUserResponse(BaseModel):
     role: str
     name: str
 
+class InventoryCreate(BaseModel):
+    name: str
+    category: str = "general"
+    quantity: float = 0
+    unit: str = "pcs"
+    status: str = "available"
+
+class InventoryUpdate(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    quantity: float | None = None
+    unit: str | None = None
+    status: str | None = None
+
 class GuestProfileCreate(BaseModel):
     guest_name: str
     email: str
