@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { erpListRooms, erpUpdateRoom } from '@/lib/erp-api';
 import { getERPToken } from '@/lib/erp-auth';
+import { uploadRoomImage } from '@/lib/erp-upload';
 import { Room as HotelRoom } from '@/types/hotel';
 import { BedDouble, Users, LayoutGrid, Map } from 'lucide-react';
 import { FloorPlanView } from './FloorPlanView';
@@ -17,6 +18,7 @@ export function RoomsModule() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [view, setView] = useState<'grid' | 'floorplan'>('floorplan');
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
   // Real-time polling every 5 seconds
   const refresh = async () => {
@@ -48,6 +50,22 @@ export function RoomsModule() {
     await erpUpdateRoom(token, Number(room.id), { is_available: !room.is_available });
     toast({ title: `Room ${room.room_number} ${!room.is_available ? 'available' : 'unavailable'}` });
     refresh();
+  };
+
+  const handleUpload = async (room: HotelRoom, file: File) => {
+    const token = getERPToken();
+    if (!token) return;
+    setUploading(prev => ({ ...prev, [room.id]: true }));
+    try {
+      const url = await uploadRoomImage(room.id, file);
+      await erpUpdateRoom(token, Number(room.id), { image_url: url });
+      toast({ title: 'Image uploaded' });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+    } finally {
+      setUploading(prev => ({ ...prev, [room.id]: false }));
+    }
   };
 
   const filtered = rooms.filter(r => {
@@ -131,6 +149,18 @@ export function RoomsModule() {
               <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />{room.capacity}
               </div>
+              <label className="block text-[10px] text-muted-foreground mt-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleUpload(room, e.target.files[0]);
+                    e.currentTarget.value = '';
+                  }}
+                />
+                {uploading[room.id] ? 'Uploading...' : 'Upload photo'}
+              </label>
             </CardContent>
           </Card>
         ))}
