@@ -37,6 +37,7 @@ from ..schemas import (
     StaffDocumentCreate,
 )
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
+import secrets
 
 router = APIRouter(prefix="/api/erp", tags=["ERP"])
 
@@ -57,19 +58,27 @@ def _require_admin(user: dict):
 
 @router.post("/login")
 def erp_login(payload: ERPLogin, session: Session = Depends(get_session)):
-    # Check admin users first
-    admin = session.exec(select(AdminUser).where(AdminUser.email == payload.email)).first()
-    if admin and verify_password(payload.password, admin.password_hash):
-        token = create_access_token({"sub": admin.email, "role": "admin", "name": admin.email})
-        return {"access_token": token, "user": {"email": admin.email, "role": "admin", "name": admin.email}}
+    # Admin login (email + password)
+    if payload.email and payload.password:
+        admin = session.exec(select(AdminUser).where(AdminUser.email == payload.email)).first()
+        if admin and verify_password(payload.password, admin.password_hash):
+            token = create_access_token({"sub": admin.email, "role": "admin", "name": admin.email})
+            return {"access_token": token, "user": {"email": admin.email, "role": "admin", "name": admin.email}}
 
-    staff = session.exec(select(StaffMember).where(StaffMember.email == payload.email)).first()
-    if not staff or not staff.password_hash or not verify_password(payload.password, staff.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    # Staff login (role + staff_code, no password)
+    if payload.role and payload.staff_code:
+        role = payload.role.lower()
+        staff = session.exec(
+            select(StaffMember).where(StaffMember.staff_code == payload.staff_code)
+        ).first()
+        if not staff or (staff.role or "").lower() != role:
+            raise HTTPException(status_code=401, detail="Invalid staff ID")
+        if staff.status != "active":
+            raise HTTPException(status_code=403, detail="Staff account inactive")
+        token = create_access_token({"sub": staff.email, "role": role, "name": staff.name})
+        return {"access_token": token, "user": {"email": staff.email, "role": role, "name": staff.name}}
 
-    role = (staff.role or "employee").lower()
-    token = create_access_token({"sub": staff.email, "role": role, "name": staff.name})
-    return {"access_token": token, "user": {"email": staff.email, "role": role, "name": staff.name}}
+    raise HTTPException(status_code=400, detail="Invalid login payload")
 
 
 @router.get("/me")
@@ -213,7 +222,11 @@ def create_staff(payload: StaffCreate, user: dict = Depends(_get_current_erp_use
     _require_admin(user)
     data = payload.model_dump()
     password = data.pop("password", None)
+    staff_code = data.pop("staff_code", None)
     staff = StaffMember(**data)
+    if not staff_code:
+        staff_code = secrets.token_hex(3).upper()
+    staff.staff_code = staff_code
     if password:
         staff.password_hash = hash_password(password)
     session.add(staff)
@@ -230,14 +243,30 @@ def update_staff(staff_id: int, payload: StaffUpdate, user: dict = Depends(_get_
         raise HTTPException(status_code=404, detail="Staff not found")
     data = payload.model_dump(exclude_unset=True)
     password = data.pop("password", None)
+    staff_code = data.pop("staff_code", None)
     for key, value in data.items():
         setattr(staff, key, value)
     if password:
         staff.password_hash = hash_password(password)
+    if staff_code:
+        staff.staff_code = staff_code
     session.add(staff)
     session.commit()
     session.refresh(staff)
     return staff
+
+
+@router.post("/staff/{staff_id}/reset-code")
+def reset_staff_code(staff_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_admin(user)
+    staff = session.get(StaffMember, staff_id)
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    staff.staff_code = secrets.token_hex(3).upper()
+    session.add(staff)
+    session.commit()
+    session.refresh(staff)
+    return {"staff_code": staff.staff_code}
 
 
 @router.delete("/staff/{staff_id}")

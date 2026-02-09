@@ -73,6 +73,7 @@ class StaffCreate(BaseModel):
     salary: float | None = None
     hired_at: date | None = None
     password: str | None = None
+    staff_code: str | None = None
 
 class StaffUpdate(BaseModel):
     name: str | None = None
@@ -87,10 +88,13 @@ class StaffUpdate(BaseModel):
     salary: float | None = None
     hired_at: date | None = None
     password: str | None = None
+    staff_code: str | None = None
 
 class ERPLogin(BaseModel):
-    email: str
-    password: str
+    email: str | None = None
+    password: str | None = None
+    role: str | None = None
+    staff_code: str | None = None
 
 class ERPUserResponse(BaseModel):
     email: str

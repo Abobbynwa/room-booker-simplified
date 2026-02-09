@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff, erpListStaffDocuments, erpAddStaffDocument, erpDeleteStaffDocument } from '@/lib/erp-api';
+import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff, erpListStaffDocuments, erpAddStaffDocument, erpDeleteStaffDocument, erpResetStaffCode } from '@/lib/erp-api';
 import { getERPToken } from '@/lib/erp-auth';
 import { uploadStaffDocument } from '@/lib/erp-upload';
 import { Plus, Trash2, Edit } from 'lucide-react';
@@ -21,6 +21,7 @@ type StaffMember = {
   email: string;
   phone: string;
   role: string;
+  staff_code?: string | null;
   department?: string | null;
   shift?: string | null;
   status: string;
@@ -54,8 +55,8 @@ export function StaffModule() {
     if (!form.name || !form.email) { toast({ title: 'Name and email required', variant: 'destructive' }); return; }
     const token = getERPToken();
     if (!token) return;
-    await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0 });
-    toast({ title: 'Staff member added' });
+    const created = await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0 });
+    toast({ title: 'Staff member added', description: `Staff ID: ${created.staff_code || 'N/A'}` });
     setForm({ name: '', email: '', phone: '', role: 'Receptionist', department: 'Reception', shift: 'morning', status: 'active', salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
     setOpen(false);
     refresh();
@@ -155,14 +156,15 @@ export function StaffModule() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Salary</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Staff ID</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Shift</TableHead>
+                          <TableHead>Salary</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -175,6 +177,7 @@ export function StaffModule() {
                       </div>
                     </TableCell>
                     <TableCell>{s.role}</TableCell>
+                    <TableCell className="font-mono text-xs">{s.staff_code || '—'}</TableCell>
                     <TableCell>{s.department}</TableCell>
                     <TableCell className="capitalize">{s.shift}</TableCell>
                     <TableCell>{formatSalary(s.salary)}</TableCell>
@@ -186,6 +189,15 @@ export function StaffModule() {
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => openDocuments(s)}>
                           Documents
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
+                          const token = getERPToken();
+                          if (!token) return;
+                          const res = await erpResetStaffCode(token, s.id);
+                          toast({ title: 'Staff ID reset', description: `New ID: ${res.staff_code}` });
+                          refresh();
+                        }}>
+                          Reset ID
                         </Button>
                         <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)}>
                           <Trash2 className="h-4 w-4" />

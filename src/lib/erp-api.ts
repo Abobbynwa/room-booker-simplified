@@ -27,6 +27,13 @@ export function erpLogin(email: string, password: string) {
   });
 }
 
+export function erpStaffLogin(role: string, staff_code: string) {
+  return api<ERPLoginResponse>("/api/erp/login", undefined, {
+    method: "POST",
+    body: JSON.stringify({ role, staff_code }),
+  });
+}
+
 export function erpMe(token: string) {
   return api<{ email: string; role: string; name: string }>("/api/erp/me", token);
 }
@@ -45,6 +52,10 @@ export function erpUpdateStaff(token: string, id: number, payload: any) {
 
 export function erpDeleteStaff(token: string, id: number) {
   return api(`/api/erp/staff/${id}`, token, { method: "DELETE" });
+}
+
+export function erpResetStaffCode(token: string, id: number) {
+  return api(`/api/erp/staff/${id}/reset-code`, token, { method: "POST" });
 }
 
 export function erpListGuests(token: string) {

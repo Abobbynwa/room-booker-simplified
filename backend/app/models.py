@@ -58,6 +58,7 @@ class StaffMember(SQLModel, table=True):
     email: str
     phone: str
     role: str
+    staff_code: Optional[str] = None
     department: Optional[str] = None
     address: Optional[str] = None
     shift: Optional[str] = None
