@@ -121,6 +121,34 @@ const BookingConfirmation = () => {
     );
   }
 
+  if (!reference && !loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 pt-20">
+          <section className="py-12">
+            <div className="container mx-auto px-4 max-w-2xl text-center">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">Booking Submitted!</h1>
+              <p className="text-muted-foreground mb-6">
+                Your booking has been received. Please check your email for confirmation and next steps.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link to="/rooms">
+                  <Button className="bg-gold hover:bg-gold-dark text-primary-foreground">Back to Rooms</Button>
+                </Link>
+                <Link to="/contact">
+                  <Button variant="outline">Contact Us</Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!booking || !room) {
     return (
       <div className="min-h-screen flex flex-col">
