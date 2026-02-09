@@ -21,6 +21,10 @@ class AdminChangePassword(BaseModel):
     current_password: str
     new_password: str
 
+class AdminChangeEmail(BaseModel):
+    current_password: str
+    new_email: str
+
 class RoomCreate(BaseModel):
     name: str
     room_type: str

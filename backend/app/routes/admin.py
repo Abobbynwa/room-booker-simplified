@@ -7,6 +7,7 @@ from ..models import AdminUser, Booking, ContactMessage, Room, PaymentAccount, B
 from ..schemas import (
     AdminLogin,
     AdminChangePassword,
+    AdminChangeEmail,
     RoomCreate,
     RoomUpdate,
     PaymentAccountCreate,
@@ -362,6 +363,28 @@ def change_password(
     session.commit()
     session.refresh(admin)
     return {"message": "Password updated successfully"}
+
+@router.post("/change-email")
+def change_email(
+    payload: AdminChangeEmail,
+    session: Session = Depends(get_session),
+    admin_email: str = Depends(get_current_admin),
+):
+    admin = session.exec(select(AdminUser).where(AdminUser.email == admin_email)).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    if not verify_password(payload.current_password, admin.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    existing = session.exec(select(AdminUser).where(AdminUser.email == payload.new_email)).first()
+    if existing and existing.id != admin.id:
+        raise HTTPException(status_code=409, detail="Email already in use")
+
+    admin.email = payload.new_email
+    session.add(admin)
+    session.commit()
+    session.refresh(admin)
+    return {"message": "Email updated successfully", "email": admin.email}
 
 # Temporary password reset endpoint (remove after use).
 @router.post("/reset-password")
