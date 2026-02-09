@@ -58,8 +58,61 @@ class StaffMember(SQLModel, table=True):
     email: str
     phone: str
     role: str
+    department: Optional[str] = None
     address: Optional[str] = None
     shift: Optional[str] = None
     account_details: Optional[str] = None
     status: str = "active"
+    salary: float = 0
+    hired_at: Optional[date] = None
+    password_hash: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GuestProfile(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    guest_name: str
+    email: str
+    phone: str
+    preferences: Optional[str] = None  # comma-separated
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GuestReceipt(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    guest_id: int
+    name: str
+    data_url: str
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+
+class CheckInRecord(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    booking_id: int
+    guest_name: str
+    room_id: str
+    room_number: str
+    checked_in_at: Optional[datetime] = None
+    checked_out_at: Optional[datetime] = None
+    status: str = "expected"
+    notes: Optional[str] = None
+
+class HousekeepingTask(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    room_id: str
+    room_number: str
+    task_type: str
+    status: str
+    priority: str
+    assigned_to: str
+    description: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
+class FloorPlanItem(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    room_id: str
+    room_number: str
+    x: float
+    y: float
+    width: float
+    height: float
+    floor: str = "1"

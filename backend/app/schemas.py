@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, datetime
 
 class BookingCreate(BaseModel):
     name: str
@@ -69,6 +69,10 @@ class StaffCreate(BaseModel):
     shift: str | None = None
     account_details: str | None = None
     status: str = "active"
+    department: str | None = None
+    salary: float | None = None
+    hired_at: date | None = None
+    password: str | None = None
 
 class StaffUpdate(BaseModel):
     name: str | None = None
@@ -79,3 +83,90 @@ class StaffUpdate(BaseModel):
     shift: str | None = None
     account_details: str | None = None
     status: str | None = None
+    department: str | None = None
+    salary: float | None = None
+    hired_at: date | None = None
+    password: str | None = None
+
+class ERPLogin(BaseModel):
+    email: str
+    password: str
+
+class ERPUserResponse(BaseModel):
+    email: str
+    role: str
+    name: str
+
+class GuestProfileCreate(BaseModel):
+    guest_name: str
+    email: str
+    phone: str
+    preferences: str | None = None
+    notes: str | None = None
+
+class GuestProfileUpdate(BaseModel):
+    guest_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    preferences: str | None = None
+    notes: str | None = None
+
+class GuestReceiptCreate(BaseModel):
+    name: str
+    data_url: str
+
+class CheckInCreate(BaseModel):
+    booking_id: int
+    guest_name: str
+    room_id: str
+    room_number: str
+    checked_in_at: datetime | None = None
+    checked_out_at: datetime | None = None
+    status: str = "expected"
+    notes: str | None = None
+
+class CheckInUpdate(BaseModel):
+    guest_name: str | None = None
+    room_id: str | None = None
+    room_number: str | None = None
+    checked_in_at: datetime | None = None
+    checked_out_at: datetime | None = None
+    status: str | None = None
+    notes: str | None = None
+
+class HousekeepingCreate(BaseModel):
+    room_id: str
+    room_number: str
+    task_type: str
+    status: str
+    priority: str
+    assigned_to: str
+    description: str
+
+class HousekeepingUpdate(BaseModel):
+    room_id: str | None = None
+    room_number: str | None = None
+    task_type: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    assigned_to: str | None = None
+    description: str | None = None
+    completed_at: datetime | None = None
+
+class FloorPlanItemCreate(BaseModel):
+    room_id: str
+    room_number: str
+    x: float
+    y: float
+    width: float
+    height: float
+    floor: str = "1"
+
+class FloorPlanItemUpdate(BaseModel):
+    room_id: str | None = None
+    room_number: str | None = None
+    x: float | None = None
+    y: float | None = None
+    width: float | None = None
+    height: float | None = None
+    floor: str | None = None
