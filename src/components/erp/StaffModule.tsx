@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff, erpListStaffDocuments, erpAddStaffDocument, erpDeleteStaffDocument, erpResetStaffCode } from '@/lib/erp-api';
 import { getERPToken } from '@/lib/erp-auth';
 import { uploadStaffDocument } from '@/lib/erp-upload';
+import { ROLE_OPTIONS, DEPARTMENT_OPTIONS, ROLE_LABELS, DEPARTMENT_LABELS } from '@/lib/erp-constants';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 const formatSalary = (s: number) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(s);
@@ -35,7 +36,7 @@ export function StaffModule() {
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'Receptionist', department: 'Reception', shift: 'morning' as const, status: 'active' as const, salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'receptionist', department: 'front_office', shift: 'morning' as const, status: 'active' as const, salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
   const [docsOpen, setDocsOpen] = useState(false);
   const [activeStaff, setActiveStaff] = useState<StaffMember | null>(null);
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
@@ -57,7 +58,7 @@ export function StaffModule() {
     if (!token) return;
     const created = await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0 });
     toast({ title: 'Staff member added', description: `Staff ID: ${created.staff_code || 'N/A'}` });
-    setForm({ name: '', email: '', phone: '', role: 'Receptionist', department: 'Reception', shift: 'morning', status: 'active', salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
+    setForm({ name: '', email: '', phone: '', role: 'receptionist', department: 'front_office', shift: 'morning', status: 'active', salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
     setOpen(false);
     refresh();
   };
@@ -127,8 +128,28 @@ export function StaffModule() {
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
               <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Role</Label><Input value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} /></div>
-                <div><Label>Department</Label><Input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></div>
+                <div>
+                  <Label>Role</Label>
+                  <Select value={form.role} onValueChange={v => setForm({ ...form, role: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map(role => (
+                        <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Department</Label>
+                  <Select value={form.department ?? ''} onValueChange={v => setForm({ ...form, department: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                    <SelectContent>
+                      {DEPARTMENT_OPTIONS.map(dept => (
+                        <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -176,9 +197,9 @@ export function StaffModule() {
                         <p className="text-xs text-muted-foreground">{s.email}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{s.role}</TableCell>
+                    <TableCell>{ROLE_LABELS[s.role] || ROLE_LABELS[s.role?.toLowerCase()] || s.role}</TableCell>
                     <TableCell className="font-mono text-xs">{s.staff_code || '—'}</TableCell>
-                    <TableCell>{s.department}</TableCell>
+                    <TableCell>{s.department ? (DEPARTMENT_LABELS[s.department] || DEPARTMENT_LABELS[s.department?.toLowerCase()] || s.department) : '—'}</TableCell>
                     <TableCell className="capitalize">{s.shift}</TableCell>
                     <TableCell>{formatSalary(s.salary)}</TableCell>
                     <TableCell><Badge variant={statusColor(s.status)} className="capitalize">{s.status}</Badge></TableCell>

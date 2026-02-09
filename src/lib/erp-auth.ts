@@ -29,13 +29,28 @@ export function clearERPAuth() {
 const ROLE_ACCESS: Record<string, string[]> = {
   admin: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "staff", "analytics", "settings"],
   manager: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "staff", "analytics", "settings"],
+  assistant_manager: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "staff", "analytics", "settings"],
   receptionist: ["dashboard", "bookings", "check-in", "rooms"],
+  concierge: ["dashboard", "bookings", "check-in", "rooms"],
   accountant: ["dashboard", "bookings", "analytics", "settings"],
+  cashier: ["dashboard", "bookings", "analytics", "settings"],
   housekeeping: ["dashboard", "housekeeping", "rooms"],
+  laundry: ["dashboard", "housekeeping", "rooms"],
+  maintenance: ["dashboard", "rooms"],
   security: ["dashboard", "rooms", "check-in"],
-  bar: ["dashboard", "bookings"],
+  bar_attendant: ["dashboard", "bookings"],
+  storekeeper: ["dashboard", "rooms"],
+  chef: ["dashboard", "bookings"],
+  kitchen_staff: ["dashboard", "bookings"],
+  restaurant_waiter: ["dashboard", "bookings"],
+  room_service: ["dashboard", "bookings"],
+  events_banquets: ["dashboard", "bookings"],
+  it_support: ["dashboard", "rooms"],
+  hr_officer: ["dashboard", "staff"],
+  sales_marketing: ["dashboard", "bookings", "analytics"],
 };
 
 export function hasAccess(role: string, module: string): boolean {
-  return ROLE_ACCESS[role]?.includes(module) ?? false;
+  const key = role?.toLowerCase() || "";
+  return ROLE_ACCESS[key]?.includes(module) ?? false;
 }

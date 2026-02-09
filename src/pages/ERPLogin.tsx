@@ -10,6 +10,8 @@ import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { erpLogin, erpStaffLogin } from '@/lib/erp-api';
 import { getERPUser, setERPAuth } from '@/lib/erp-auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ROLE_OPTIONS } from '@/lib/erp-constants';
 
 const ERPLogin = () => {
   const [email, setEmail] = useState('');
@@ -82,7 +84,14 @@ const ERPLogin = () => {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
-                    <Input id="role" placeholder="receptionist / bar / housekeeping" value={role} onChange={e => setRole(e.target.value.toLowerCase())} />
+                    <Select value={role} onValueChange={setRole}>
+                      <SelectTrigger id="role"><SelectValue placeholder="Select role" /></SelectTrigger>
+                      <SelectContent>
+                        {ROLE_OPTIONS.map(r => (
+                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="staff_code">Staff ID</Label>
