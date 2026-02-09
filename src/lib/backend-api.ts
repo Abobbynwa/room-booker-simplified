@@ -10,6 +10,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 interface BookingPayload {
   name: string;
   email: string;
+  phone?: string | null;
   room_type: string;
   check_in: string;
   check_out: string;
@@ -64,7 +65,7 @@ export async function fetchPublicAnnouncements(): Promise<any[]> {
 /**
  * Submit a booking via the FastAPI backend
  */
-export async function submitBooking(booking: BookingPayload): Promise<{ message: string }> {
+export async function submitBooking(booking: BookingPayload): Promise<{ message: string; reference_number?: string }> {
   const response = await fetch(`${BACKEND_URL}/api/booking/`, {
     method: 'POST',
     headers: {
@@ -78,6 +79,15 @@ export async function submitBooking(booking: BookingPayload): Promise<{ message:
     throw new Error(error.detail || 'Booking submission failed');
   }
 
+  return response.json();
+}
+
+export async function fetchBookingByReference(reference: string): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/api/booking/reference/${reference}`);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Not found' }));
+    throw new Error(error.detail || 'Not found');
+  }
   return response.json();
 }
 

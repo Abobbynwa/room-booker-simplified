@@ -74,6 +74,7 @@ def get_bookings(session: Session = Depends(get_session), admin=Depends(get_curr
         meta = meta_map.get(b.id)
         enriched.append({
             "id": b.id,
+            "reference_number": b.reference_number,
             "name": b.name,
             "email": b.email,
             "room_type": b.room_type,

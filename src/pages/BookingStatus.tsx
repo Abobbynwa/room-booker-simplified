@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { fetchBookingByReference, fetchRoomById } from '@/lib/api';
-import { Booking, Room } from '@/types/hotel';
+import { fetchBookingByReference } from '@/lib/backend-api';
 import { Search, Clock, CheckCircle, XCircle, LogIn, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -19,8 +18,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
 
 const BookingStatus = () => {
   const [reference, setReference] = useState('');
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [booking, setBooking] = useState<any | null>(null);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,11 +39,7 @@ const BookingStatus = () => {
       const found = await fetchBookingByReference(reference.trim().toUpperCase());
       setBooking(found);
       setSearched(true);
-      
-      if (found) {
-        const roomData = await fetchRoomById(found.room_id);
-        setRoom(roomData);
-      } else {
+      if (!found) {
         setError('No booking found with this reference number');
       }
     } catch (err) {
@@ -55,15 +49,7 @@ const BookingStatus = () => {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const typeLabel = room ? room.type.charAt(0).toUpperCase() + room.type.slice(1) : '';
+  const typeLabel = booking?.room_type ? booking.room_type.charAt(0).toUpperCase() + booking.room_type.slice(1) : '';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -106,14 +92,14 @@ const BookingStatus = () => {
               </CardContent>
             </Card>
 
-            {booking && room && (
+            {booking && (
               <Card className="animate-fade-in">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="font-serif">Booking Details</CardTitle>
-                    <Badge className={`${statusConfig[booking.booking_status]?.color || 'bg-gray-500'} text-white gap-1`}>
-                      {statusConfig[booking.booking_status]?.icon}
-                      {statusConfig[booking.booking_status]?.label || booking.booking_status}
+                    <Badge className={`${statusConfig[booking.status]?.color || 'bg-gray-500'} text-white gap-1`}>
+                      {statusConfig[booking.status]?.icon}
+                      {statusConfig[booking.status]?.label || booking.status}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -127,34 +113,33 @@ const BookingStatus = () => {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Room</p>
                       <p className="font-medium">{typeLabel}</p>
-                      <p className="text-sm text-muted-foreground">Room {room.room_number}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Guest</p>
-                      <p className="font-medium">{booking.guest_name}</p>
-                      <p className="text-sm text-muted-foreground">{booking.guest_email}</p>
+                      <p className="font-medium">{booking.name}</p>
+                      <p className="text-sm text-muted-foreground">{booking.email}</p>
                     </div>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Check-in</p>
-                      <p className="font-medium">{format(new Date(booking.check_in_date), 'PPP')}</p>
+                      <p className="font-medium">{format(new Date(booking.check_in), 'PPP')}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Check-out</p>
-                      <p className="font-medium">{format(new Date(booking.check_out_date), 'PPP')}</p>
+                      <p className="font-medium">{format(new Date(booking.check_out), 'PPP')}</p>
                     </div>
                   </div>
 
                   <div className="border-t border-border pt-4">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">Total Amount</span>
-                      <span className="text-2xl font-bold text-gold">{formatPrice(booking.total_amount)}</span>
+                      <span className="font-semibold">Payment Status</span>
+                      <span className="text-2xl font-bold text-gold capitalize">{booking.payment_status || 'unpaid'}</span>
                     </div>
                   </div>
 
-                  {booking.booking_status === 'pending' && (
+                  {booking.status === 'pending' && (
                     <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
                       <p className="text-sm">
                         <strong>Payment Pending:</strong> Please complete your payment and send the receipt via WhatsApp to confirm your booking.

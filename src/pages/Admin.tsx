@@ -15,6 +15,7 @@ import { Loader2, LogOut, RefreshCcw, ShieldCheck, Mail, ClipboardList } from 'l
 
 type AdminBooking = {
   id: number;
+  reference_number?: string;
   name: string;
   email: string;
   room_type: string;
@@ -237,8 +238,9 @@ const Admin = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Name</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Ref</TableHead>
+                        <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Room Type</TableHead>
                           <TableHead>Check In</TableHead>
@@ -253,6 +255,7 @@ const Admin = () => {
                       {bookings.map((booking) => (
                         <TableRow key={booking.id}>
                           <TableCell>{booking.id}</TableCell>
+                          <TableCell className="font-mono text-xs">{booking.reference_number || '—'}</TableCell>
                           <TableCell>{booking.name}</TableCell>
                           <TableCell>{booking.email}</TableCell>
                           <TableCell>{booking.room_type}</TableCell>

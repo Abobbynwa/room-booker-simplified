@@ -110,9 +110,10 @@ export function BookingForm({ room }: BookingFormProps) {
       }
 
       // Submit to backend FastAPI
-      await submitBooking({
+      const result = await submitBooking({
         name: guestName,
         email: guestEmail,
+        phone: guestPhone,
         room_type: room.type,
         check_in: format(checkIn, 'yyyy-MM-dd'),
         check_out: format(checkOut, 'yyyy-MM-dd'),
@@ -131,7 +132,11 @@ export function BookingForm({ room }: BookingFormProps) {
       setCheckIn(undefined);
       setCheckOut(undefined);
       
-      navigate('/booking-confirmation');
+      if (result.reference_number) {
+        navigate(`/booking-confirmation/${result.reference_number}`);
+      } else {
+        navigate('/booking-confirmation');
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       toast({

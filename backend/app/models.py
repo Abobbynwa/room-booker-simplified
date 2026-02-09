@@ -4,8 +4,10 @@ from typing import Optional
 
 class Booking(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    reference_number: str
     name: str
     email: str
+    phone: Optional[str] = None
     room_type: str
     check_in: date
     check_out: date

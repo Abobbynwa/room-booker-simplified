@@ -4,6 +4,7 @@ from datetime import date, datetime
 class BookingCreate(BaseModel):
     name: str
     email: str
+    phone: str | None = None
     room_type: str
     check_in: date
     check_out: date

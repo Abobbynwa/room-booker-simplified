@@ -5,8 +5,8 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchBookingByReference, fetchRoomById, paymentDetails, contactInfo, uploadPaymentProof } from '@/lib/api';
-import { Booking, Room } from '@/types/hotel';
+import { paymentDetails, contactInfo, uploadPaymentProof } from '@/lib/api';
+import { fetchBookingByReference } from '@/lib/backend-api';
 import { CheckCircle, Copy, Check, MessageCircle, Upload, Loader2, ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -14,8 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 const BookingConfirmation = () => {
   const { reference } = useParams();
   const { toast } = useToast();
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [booking, setBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,9 +31,7 @@ const BookingConfirmation = () => {
       .then(async (bookingData) => {
         setBooking(bookingData);
         if (bookingData) {
-          setProofUploaded(!!bookingData.payment_proof_url);
-          const roomData = await fetchRoomById(bookingData.room_id);
-          setRoom(roomData);
+          setProofUploaded(!!bookingData.payment_proof);
         }
       })
       .catch(console.error)
@@ -94,14 +91,6 @@ const BookingConfirmation = () => {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -149,7 +138,7 @@ const BookingConfirmation = () => {
     );
   }
 
-  if (!booking || !room) {
+  if (!booking) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -167,10 +156,10 @@ const BookingConfirmation = () => {
     );
   }
 
-  const typeLabel = room.type.charAt(0).toUpperCase() + room.type.slice(1);
+  const typeLabel = booking.room_type ? booking.room_type.charAt(0).toUpperCase() + booking.room_type.slice(1) : "Room";
 
   const whatsappMessage = encodeURIComponent(
-    `Hello! I just made a booking.\n\nReference: ${booking.reference_number}\nRoom: ${typeLabel} (${room.room_number})\nAmount: ${formatPrice(booking.total_amount)}\n\nI would like to confirm my payment.`
+    `Hello! I just made a booking.\n\nReference: ${booking.reference_number}\nRoom: ${typeLabel}\n\nI would like to confirm my payment.`
   );
 
   return (
@@ -214,23 +203,23 @@ const BookingConfirmation = () => {
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Room</span>
-                  <span className="font-medium">{typeLabel} ({room.room_number})</span>
+                  <span className="font-medium">{typeLabel}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Guest</span>
-                  <span className="font-medium">{booking.guest_name}</span>
+                  <span className="font-medium">{booking.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Check-in</span>
-                  <span className="font-medium">{format(new Date(booking.check_in_date), 'PPP')}</span>
+                  <span className="font-medium">{format(new Date(booking.check_in), 'PPP')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Check-out</span>
-                  <span className="font-medium">{format(new Date(booking.check_out_date), 'PPP')}</span>
+                  <span className="font-medium">{format(new Date(booking.check_out), 'PPP')}</span>
                 </div>
                 <div className="flex justify-between border-t border-border pt-3">
-                  <span className="font-semibold">Total Amount</span>
-                  <span className="font-bold text-gold text-lg">{formatPrice(booking.total_amount)}</span>
+                  <span className="font-semibold">Status</span>
+                  <span className="font-bold text-gold text-lg capitalize">{booking.payment_status || 'unpaid'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -242,7 +231,7 @@ const BookingConfirmation = () => {
               <CardContent className="space-y-4">
                 <div className="bg-accent/30 rounded-lg p-4">
                   <h4 className="font-semibold mb-2">1. Make Payment</h4>
-                  <p className="text-sm text-muted-foreground mb-3">Transfer {formatPrice(booking.total_amount)} to any of these accounts:</p>
+                  <p className="text-sm text-muted-foreground mb-3">Transfer to any of these accounts:</p>
                   {paymentDetails.map((payment, index) => (
                     <div key={index} className="text-sm mb-2 last:mb-0">
                       <span className="font-medium text-gold">{payment.bankName}:</span> {payment.accountNumber} ({payment.accountName})
