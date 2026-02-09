@@ -4,6 +4,7 @@ from ..db_core import get_session
 from ..models import Booking, BookingMeta
 from ..schemas import BookingCreate
 from ..utils.email import send_email
+from ..utils.sms import send_sms
 import os
 
 router = APIRouter(prefix="/api/booking", tags=["Booking"])
@@ -25,6 +26,7 @@ def submit_booking(
     session.commit()
 
     admin_email = os.getenv("ADMIN_ALERT_EMAIL")
+    admin_phone = os.getenv("ADMIN_ALERT_PHONE")
     if admin_email:
         subject = "New Booking Received"
         body = (
@@ -35,5 +37,11 @@ def submit_booking(
             f"<p><strong>Check Out:</strong> {booking.check_out}</p>"
         )
         background_tasks.add_task(send_email, admin_email, subject, body)
+    if admin_phone:
+        sms_body = (
+            f"New booking: {booking.name} ({booking.email}) "
+            f"Room: {booking.room_type} {booking.check_in} to {booking.check_out}"
+        )
+        background_tasks.add_task(send_sms, admin_phone, sms_body)
 
     return {"message": "Booking submitted successfully"}

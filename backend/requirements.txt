@@ -10,3 +10,4 @@ python-multipart
 pydantic-settings
 fastapi-mail
 openpyxl
+twilio
