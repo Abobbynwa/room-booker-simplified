@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,33 +8,66 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getStaff, createStaff, deleteStaff, updateStaff, StaffMember } from '@/lib/erpData';
+import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff } from '@/lib/erp-api';
+import { getERPToken } from '@/lib/erp-auth';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 const formatSalary = (s: number) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(s);
 
+type StaffMember = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  department?: string | null;
+  shift?: string | null;
+  status: string;
+  salary?: number | null;
+  hired_at?: string | null;
+};
+
 export function StaffModule() {
   const { toast } = useToast();
-  const [staff, setStaff] = useState(getStaff());
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'Front Desk', department: 'Reception', shift: 'morning' as const, status: 'active' as const, salary: '', hired_at: new Date().toISOString().split('T')[0] });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'Receptionist', department: 'Reception', shift: 'morning' as const, status: 'active' as const, salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
 
-  const refresh = () => setStaff(getStaff());
+  const refresh = async () => {
+    const token = getERPToken();
+    if (!token) return;
+    const data = await erpListStaff(token);
+    setStaff(data as StaffMember[]);
+  };
 
-  const handleCreate = () => {
+  useEffect(() => {
+    refresh().catch(() => undefined);
+  }, []);
+
+  const handleCreate = async () => {
     if (!form.name || !form.email) { toast({ title: 'Name and email required', variant: 'destructive' }); return; }
-    createStaff({ ...form, salary: Number(form.salary) || 0 });
+    const token = getERPToken();
+    if (!token) return;
+    await erpCreateStaff(token, { ...form, salary: Number(form.salary) || 0 });
     toast({ title: 'Staff member added' });
-    setForm({ name: '', email: '', phone: '', role: 'Front Desk', department: 'Reception', shift: 'morning', status: 'active', salary: '', hired_at: new Date().toISOString().split('T')[0] });
+    setForm({ name: '', email: '', phone: '', role: 'Receptionist', department: 'Reception', shift: 'morning', status: 'active', salary: '', hired_at: new Date().toISOString().split('T')[0], password: '' });
     setOpen(false);
     refresh();
   };
 
-  const handleDelete = (id: string) => { deleteStaff(id); toast({ title: 'Staff removed' }); refresh(); };
+  const handleDelete = async (id: number) => { 
+    const token = getERPToken();
+    if (!token) return;
+    await erpDeleteStaff(token, id); 
+    toast({ title: 'Staff removed' }); 
+    refresh(); 
+  };
 
-  const toggleStatus = (s: StaffMember) => {
+  const toggleStatus = async (s: StaffMember) => {
     const next = s.status === 'active' ? 'inactive' : 'active';
-    updateStaff(s.id, { status: next });
+    const token = getERPToken();
+    if (!token) return;
+    await erpUpdateStaff(token, s.id, { status: next });
     toast({ title: `Status changed to ${next}` });
     refresh();
   };
@@ -76,6 +109,7 @@ export function StaffModule() {
                 </div>
                 <div><Label>Salary (₦)</Label><Input type="number" value={form.salary} onChange={e => setForm({ ...form, salary: e.target.value })} /></div>
               </div>
+              <div><Label>Password (optional)</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
               <Button onClick={handleCreate} className="w-full">Add Staff Member</Button>
             </div>
           </DialogContent>

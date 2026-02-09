@@ -1,11 +1,12 @@
-import { useState, DragEvent } from 'react';
+import { useEffect, useState, DragEvent } from 'react';
 import { Room } from '@/types/hotel';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { getCheckInRecords, reassignRoom, checkInGuest, CheckInRecord } from '@/lib/erpData';
+import { erpListCheckins, erpUpdateCheckin, erpUpdateRoom } from '@/lib/erp-api';
+import { getERPToken } from '@/lib/erp-auth';
 import { BedDouble, Users, DollarSign, GripVertical, UserCheck } from 'lucide-react';
 
 const formatPrice = (price: number) =>
@@ -24,13 +25,34 @@ interface FloorPlanViewProps {
   onToggle: (room: Room) => void;
 }
 
+type CheckInRecord = {
+  id: number;
+  booking_id: number;
+  guest_name: string;
+  room_id: string;
+  room_number: string;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  status: 'expected' | 'checked_in' | 'checked_out' | 'no_show';
+  notes: string | null;
+};
+
 export function FloorPlanView({ rooms, onToggle }: FloorPlanViewProps) {
   const { toast } = useToast();
   const [floorFilter, setFloorFilter] = useState('all');
   const [dragOverRoom, setDragOverRoom] = useState<string | null>(null);
-  const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>(getCheckInRecords());
+  const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
 
-  const refreshRecords = () => setCheckInRecords(getCheckInRecords());
+  const refreshRecords = async () => {
+    const token = getERPToken();
+    if (!token) return;
+    const data = await erpListCheckins(token);
+    setCheckInRecords(data as CheckInRecord[]);
+  };
+
+  useEffect(() => {
+    refreshRecords().catch(() => undefined);
+  }, []);
 
   // Guests waiting for check-in (expected status)
   const pendingGuests = checkInRecords.filter(r => r.status === 'expected');
@@ -71,7 +93,7 @@ export function FloorPlanView({ rooms, onToggle }: FloorPlanViewProps) {
 
   const handleDragLeave = () => setDragOverRoom(null);
 
-  const handleDrop = (e: DragEvent, room: Room) => {
+  const handleDrop = async (e: DragEvent, room: Room) => {
     e.preventDefault();
     setDragOverRoom(null);
     if (!room.is_available) return;
@@ -80,11 +102,12 @@ export function FloorPlanView({ rooms, onToggle }: FloorPlanViewProps) {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
       const { checkInId, guestName } = data;
 
-      // Reassign room and check in
-      reassignRoom(checkInId, room.id, room.room_number);
-      checkInGuest(checkInId);
+      const token = getERPToken();
+      if (!token) return;
+      await erpUpdateCheckin(token, Number(checkInId), { room_id: room.id, room_number: room.room_number, status: 'checked_in' });
+      await erpUpdateRoom(token, Number(room.id), { is_available: false });
       refreshRecords();
-      onToggle(room); // Mark room as occupied
+      onToggle(room);
 
       toast({
         title: `✅ ${guestName} assigned to Room ${room.room_number}`,

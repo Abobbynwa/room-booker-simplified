@@ -9,7 +9,8 @@ import { HousekeepingModule } from '@/components/erp/HousekeepingModule';
 import { StaffModule } from '@/components/erp/StaffModule';
 import { AnalyticsModule } from '@/components/erp/AnalyticsModule';
 import { SettingsModule } from '@/components/erp/SettingsModule';
-import { getERPUser, erpSignOut, hasAccess, ERPUser } from '@/lib/erpData';
+import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth } from '@/lib/erp-auth';
+import { erpMe } from '@/lib/erp-api';
 import { Loader2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -24,16 +25,24 @@ const ERPDashboard = () => {
 
   useEffect(() => {
     const u = getERPUser();
-    if (!u) {
+    const token = getERPToken();
+    if (!u || !token) {
       navigate('/erp/login');
       return;
     }
     setUser(u);
     setLoading(false);
+    erpMe(token).then(me => {
+      setUser(me);
+      setERPAuth(token, me);
+    }).catch(() => {
+      clearERPAuth();
+      navigate('/erp/login');
+    });
   }, [navigate]);
 
   const handleSignOut = () => {
-    erpSignOut();
+    clearERPAuth();
     toast({ title: 'Signed out' });
     navigate('/erp/login');
   };

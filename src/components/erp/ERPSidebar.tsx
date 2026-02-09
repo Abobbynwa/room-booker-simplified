@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Home, Settings, Sparkles, Users, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ERPUser, hasAccess } from '@/lib/erpData';
+import { ERPUser, hasAccess } from '@/lib/erp-auth';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 

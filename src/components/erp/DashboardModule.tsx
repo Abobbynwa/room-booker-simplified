@@ -1,28 +1,50 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BedDouble, CalendarCheck, DollarSign, Users, TrendingUp, Sparkles } from 'lucide-react';
-import { getAnalyticsData, getStaff, getHousekeepingTasks, getCheckInRecords } from '@/lib/erpData';
+import { erpReportSummary, erpListStaff, erpListHousekeeping, erpListCheckins, erpListRooms } from '@/lib/erp-api';
+import { getERPToken } from '@/lib/erp-auth';
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price);
 
 export function DashboardModule() {
-  const analytics = getAnalyticsData();
-  const staff = getStaff();
-  const tasks = getHousekeepingTasks();
-  const checkIns = getCheckInRecords();
+  const [stats, setStats] = useState<any[]>([]);
+  const [pendingTasks, setPendingTasks] = useState(0);
+  const [inProgressTasks, setInProgressTasks] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [todayCheckIns, setTodayCheckIns] = useState(0);
 
-  const activeStaff = staff.filter(s => s.status === 'active').length;
-  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
-  const todayCheckIns = checkIns.filter(c => c.status === 'expected').length;
+  useEffect(() => {
+    const token = getERPToken();
+    if (!token) return;
+    Promise.all([
+      erpReportSummary(token),
+      erpListStaff(token),
+      erpListHousekeeping(token),
+      erpListCheckins(token),
+      erpListRooms(token),
+    ]).then(([report, staff, tasks, checkins, rooms]) => {
+      const activeStaff = staff.filter((s: any) => s.status === 'active').length;
+      const pending = tasks.filter((t: any) => t.status === 'pending').length;
+      const inProgress = tasks.filter((t: any) => t.status === 'in_progress').length;
+      const completed = tasks.filter((t: any) => t.status === 'completed').length;
+      const expected = checkins.filter((c: any) => c.status === 'expected').length;
+      setPendingTasks(pending);
+      setInProgressTasks(inProgress);
+      setCompletedTasks(completed);
+      setTodayCheckIns(expected);
 
-  const stats = [
-    { label: 'Total Revenue', value: formatPrice(analytics.totalRevenue), icon: DollarSign, color: 'text-green-600' },
-    { label: 'Total Bookings', value: analytics.totalBookings, icon: CalendarCheck, color: 'text-blue-600' },
-    { label: 'Occupancy Rate', value: `${analytics.occupancyRate}%`, icon: TrendingUp, color: 'text-primary' },
-    { label: 'Occupied Rooms', value: `${analytics.occupiedRooms}/${analytics.totalRooms}`, icon: BedDouble, color: 'text-orange-600' },
-    { label: 'Active Staff', value: activeStaff, icon: Users, color: 'text-purple-600' },
-    { label: 'Pending Tasks', value: pendingTasks, icon: Sparkles, color: 'text-red-600' },
-  ];
+      const occupiedRooms = rooms.filter((r: any) => !r.is_available).length;
+      setStats([
+        { label: 'Estimated Revenue', value: formatPrice(report.estimated_revenue || 0), icon: DollarSign, color: 'text-green-600' },
+        { label: 'Total Bookings', value: report.total_bookings || 0, icon: CalendarCheck, color: 'text-blue-600' },
+        { label: 'Occupancy Rate', value: `${((report.occupancy_rate || 0) * 100).toFixed(1)}%`, icon: TrendingUp, color: 'text-primary' },
+        { label: 'Occupied Rooms', value: `${occupiedRooms}/${rooms.length}`, icon: BedDouble, color: 'text-orange-600' },
+        { label: 'Active Staff', value: activeStaff, icon: Users, color: 'text-purple-600' },
+        { label: 'Pending Tasks', value: pending, icon: Sparkles, color: 'text-red-600' },
+      ]);
+    }).catch(() => undefined);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -64,8 +86,8 @@ export function DashboardModule() {
           </CardHeader>
           <CardContent className="space-y-1">
             <p className="text-sm"><span className="font-medium text-red-600">{pendingTasks}</span> pending</p>
-            <p className="text-sm"><span className="font-medium text-yellow-600">{tasks.filter(t => t.status === 'in_progress').length}</span> in progress</p>
-            <p className="text-sm"><span className="font-medium text-green-600">{tasks.filter(t => t.status === 'completed').length}</span> completed</p>
+            <p className="text-sm"><span className="font-medium text-yellow-600">{inProgressTasks}</span> in progress</p>
+            <p className="text-sm"><span className="font-medium text-green-600">{completedTasks}</span> completed</p>
           </CardContent>
         </Card>
       </div>

@@ -1,28 +1,54 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { getCheckInRecords, checkInGuest, checkOutGuest, CheckInRecord } from '@/lib/erpData';
+import { erpListCheckins, erpUpdateCheckin } from '@/lib/erp-api';
+import { getERPToken } from '@/lib/erp-auth';
 import { GuestProfileCard } from './GuestProfileCard';
 import { LogIn, LogOut, User } from 'lucide-react';
 
+type CheckInRecord = {
+  id: number;
+  booking_id: number;
+  guest_name: string;
+  room_id: string;
+  room_number: string;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  status: 'expected' | 'checked_in' | 'checked_out' | 'no_show';
+  notes: string | null;
+};
+
 export function CheckInOutModule() {
   const { toast } = useToast();
-  const [records, setRecords] = useState(getCheckInRecords());
+  const [records, setRecords] = useState<CheckInRecord[]>([]);
 
-  const refresh = () => setRecords(getCheckInRecords());
+  const refresh = async () => {
+    const token = getERPToken();
+    if (!token) return;
+    const data = await erpListCheckins(token);
+    setRecords(data as CheckInRecord[]);
+  };
 
-  const handleCheckIn = (id: string, name: string) => {
-    checkInGuest(id);
+  useEffect(() => {
+    refresh().catch(() => undefined);
+  }, []);
+
+  const handleCheckIn = async (id: number, name: string) => {
+    const token = getERPToken();
+    if (!token) return;
+    await erpUpdateCheckin(token, id, { status: 'checked_in' });
     toast({ title: `${name} checked in`, description: `Room assigned at ${new Date().toLocaleTimeString()}` });
     refresh();
   };
 
-  const handleCheckOut = (id: string, name: string) => {
-    checkOutGuest(id);
+  const handleCheckOut = async (id: number, name: string) => {
+    const token = getERPToken();
+    if (!token) return;
+    await erpUpdateCheckin(token, id, { status: 'checked_out' });
     toast({ title: `${name} checked out`, description: 'Room is now available for cleaning' });
     refresh();
   };

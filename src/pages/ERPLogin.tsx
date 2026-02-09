@@ -8,7 +8,8 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { erpSignIn, getERPUser } from '@/lib/erpData';
+import { erpLogin } from '@/lib/erp-api';
+import { getERPUser, setERPAuth } from '@/lib/erp-auth';
 
 const ERPLogin = () => {
   const [email, setEmail] = useState('');
@@ -22,19 +23,20 @@ const ERPLogin = () => {
     if (user) navigate('/erp');
   }, [navigate]);
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast({ title: 'Enter email and password', variant: 'destructive' }); return; }
     setIsSubmitting(true);
     
-    const result = erpSignIn(email, password);
-    setIsSubmitting(false);
-    
-    if (result.success) {
-      toast({ title: 'Welcome back!', description: `Signed in as ${result.user!.role}` });
+    try {
+      const result = await erpLogin(email, password);
+      setERPAuth(result.access_token, result.user);
+      toast({ title: 'Welcome back!', description: `Signed in as ${result.user.role}` });
       navigate('/erp');
-    } else {
-      toast({ title: 'Login failed', description: result.error, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Login failed', description: error instanceof Error ? error.message : 'Invalid credentials', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,28 +8,61 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getHousekeepingTasks, createHousekeepingTask, updateHousekeepingTask, deleteHousekeepingTask, HousekeepingTask } from '@/lib/erpData';
+import { erpListHousekeeping, erpCreateHousekeeping, erpUpdateHousekeeping, erpDeleteHousekeeping } from '@/lib/erp-api';
+import { getERPToken } from '@/lib/erp-auth';
 import { Plus, Trash2, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+
+type HousekeepingTask = {
+  id: number;
+  room_id: string;
+  room_number: string;
+  task_type: string;
+  status: string;
+  priority: string;
+  assigned_to: string;
+  description: string;
+};
 
 export function HousekeepingModule() {
   const { toast } = useToast();
-  const [tasks, setTasks] = useState(getHousekeepingTasks());
+  const [tasks, setTasks] = useState<HousekeepingTask[]>([]);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<string>('all');
-  const [form, setForm] = useState({ room_id: '', room_number: '', type: 'cleaning' as HousekeepingTask['type'], priority: 'medium' as HousekeepingTask['priority'], assigned_to: '', description: '', status: 'pending' as HousekeepingTask['status'] });
+  const [form, setForm] = useState({ room_id: '', room_number: '', type: 'cleaning', priority: 'medium', assigned_to: '', description: '', status: 'pending' });
 
-  const refresh = () => setTasks(getHousekeepingTasks());
+  const refresh = async () => {
+    const token = getERPToken();
+    if (!token) return;
+    const data = await erpListHousekeeping(token);
+    setTasks(data as HousekeepingTask[]);
+  };
 
-  const handleCreate = () => {
+  useEffect(() => {
+    refresh().catch(() => undefined);
+  }, []);
+
+  const handleCreate = async () => {
     if (!form.room_number) { toast({ title: 'Room number required', variant: 'destructive' }); return; }
-    createHousekeepingTask({ ...form, room_id: `room-${form.room_number}` });
+    const token = getERPToken();
+    if (!token) return;
+    await erpCreateHousekeeping(token, {
+      room_id: form.room_id || `room-${form.room_number}`,
+      room_number: form.room_number,
+      task_type: form.type,
+      status: form.status,
+      priority: form.priority,
+      assigned_to: form.assigned_to,
+      description: form.description,
+    });
     toast({ title: 'Task created' });
     setOpen(false);
     refresh();
   };
 
-  const handleStatusChange = (id: string, status: HousekeepingTask['status']) => {
-    updateHousekeepingTask(id, { status });
+  const handleStatusChange = async (id: number, status: string) => {
+    const token = getERPToken();
+    if (!token) return;
+    await erpUpdateHousekeeping(token, id, { status });
     toast({ title: `Task marked as ${status}` });
     refresh();
   };
@@ -117,7 +150,7 @@ export function HousekeepingModule() {
                 {filtered.map(t => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">Room {t.room_number}</TableCell>
-                    <TableCell className="capitalize">{t.type}</TableCell>
+                    <TableCell className="capitalize">{t.task_type}</TableCell>
                     <TableCell><Badge variant={priorityColor(t.priority)} className="capitalize">{t.priority}</Badge></TableCell>
                     <TableCell>{t.assigned_to}</TableCell>
                     <TableCell><div className="flex items-center gap-1">{statusIcon(t.status)}<span className="capitalize text-sm">{t.status.replace('_', ' ')}</span></div></TableCell>
@@ -125,7 +158,13 @@ export function HousekeepingModule() {
                       <div className="flex gap-1">
                         {t.status === 'pending' && <Button size="sm" variant="outline" onClick={() => handleStatusChange(t.id, 'in_progress')}>Start</Button>}
                         {t.status === 'in_progress' && <Button size="sm" onClick={() => handleStatusChange(t.id, 'completed')}>Complete</Button>}
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { deleteHousekeepingTask(t.id); toast({ title: 'Task deleted' }); refresh(); }}>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => { 
+                          const token = getERPToken(); 
+                          if (!token) return; 
+                          await erpDeleteHousekeeping(token, t.id); 
+                          toast({ title: 'Task deleted' }); 
+                          refresh(); 
+                        }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

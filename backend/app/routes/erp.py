@@ -12,6 +12,10 @@ from ..models import (
     CheckInRecord,
     HousekeepingTask,
     FloorPlanItem,
+    Room,
+    Booking,
+    BookingMeta,
+    PaymentAccount,
 )
 from ..schemas import (
     ERPLogin,
@@ -27,6 +31,8 @@ from ..schemas import (
     HousekeepingUpdate,
     FloorPlanItemCreate,
     FloorPlanItemUpdate,
+    BookingStatusUpdate,
+    PaymentProofUpdate,
 )
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
 
@@ -59,13 +65,138 @@ def erp_login(payload: ERPLogin, session: Session = Depends(get_session)):
     if not staff or not staff.password_hash or not verify_password(payload.password, staff.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"sub": staff.email, "role": "employee", "name": staff.name})
-    return {"access_token": token, "user": {"email": staff.email, "role": "employee", "name": staff.name}}
+    role = (staff.role or "employee").lower()
+    token = create_access_token({"sub": staff.email, "role": role, "name": staff.name})
+    return {"access_token": token, "user": {"email": staff.email, "role": role, "name": staff.name}}
 
 
 @router.get("/me")
 def erp_me(user: dict = Depends(_get_current_erp_user)):
     return {"email": user.get("sub"), "role": user.get("role"), "name": user.get("name")}
+
+
+# Rooms
+@router.get("/rooms")
+def list_rooms(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    return session.exec(select(Room)).all()
+
+
+@router.put("/rooms/{room_id}")
+def update_room(room_id: int, payload: dict, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    room = session.get(Room, room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    for key, value in payload.items():
+        if hasattr(room, key):
+            setattr(room, key, value)
+    session.add(room)
+    session.commit()
+    session.refresh(room)
+    return room
+
+
+# Bookings
+@router.get("/bookings")
+def list_bookings(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    bookings = session.exec(select(Booking)).all()
+    metas = session.exec(select(BookingMeta)).all()
+    meta_map = {m.booking_id: m for m in metas}
+    enriched = []
+    for b in bookings:
+        meta = meta_map.get(b.id)
+        enriched.append({
+            "id": b.id,
+            "name": b.name,
+            "email": b.email,
+            "room_type": b.room_type,
+            "check_in": b.check_in,
+            "check_out": b.check_out,
+            "created_at": b.created_at,
+            "status": meta.status if meta else "pending",
+            "payment_status": meta.payment_status if meta else "unpaid",
+            "payment_proof": meta.payment_proof if meta else None,
+        })
+    return enriched
+
+
+@router.post("/bookings/{booking_id}/status")
+def update_booking_status(
+    booking_id: int,
+    payload: BookingStatusUpdate,
+    user: dict = Depends(_get_current_erp_user),
+    session: Session = Depends(get_session),
+):
+    meta = session.exec(select(BookingMeta).where(BookingMeta.booking_id == booking_id)).first()
+    if not meta:
+        meta = BookingMeta(booking_id=booking_id)
+    meta.status = payload.status
+    if payload.payment_status:
+        meta.payment_status = payload.payment_status
+    session.add(meta)
+    session.commit()
+    session.refresh(meta)
+    return {"message": "Booking status updated"}
+
+
+@router.post("/bookings/{booking_id}/payment-proof")
+def update_booking_proof(
+    booking_id: int,
+    payload: PaymentProofUpdate,
+    user: dict = Depends(_get_current_erp_user),
+    session: Session = Depends(get_session),
+):
+    meta = session.exec(select(BookingMeta).where(BookingMeta.booking_id == booking_id)).first()
+    if not meta:
+        meta = BookingMeta(booking_id=booking_id)
+    meta.payment_proof = payload.payment_proof
+    session.add(meta)
+    session.commit()
+    session.refresh(meta)
+    return {"message": "Payment proof updated"}
+
+
+# Reports
+@router.get("/reports/summary")
+def report_summary(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    bookings = session.exec(select(Booking)).all()
+    rooms = session.exec(select(Room)).all()
+
+    rooms_count = len(rooms)
+    days = 30
+
+    price_map: dict[str, float] = {}
+    type_counts: dict[str, int] = {}
+    for r in rooms:
+        price_map[r.room_type] = price_map.get(r.room_type, 0) + r.price
+        type_counts[r.room_type] = type_counts.get(r.room_type, 0) + 1
+    for t, total in price_map.items():
+        price_map[t] = total / max(type_counts.get(t, 1), 1)
+
+    total_bookings = 0
+    booked_nights = 0
+    estimated_revenue = 0.0
+    for b in bookings:
+        total_bookings += 1
+        nights = max((b.check_out - b.check_in).days, 0)
+        booked_nights += nights
+        estimated_revenue += nights * price_map.get(b.room_type, 0)
+
+    occupancy_rate = 0.0
+    if rooms_count > 0:
+        occupancy_rate = booked_nights / float(rooms_count * days)
+
+    return {
+        "total_bookings": total_bookings,
+        "rooms_count": rooms_count,
+        "booked_nights": booked_nights,
+        "occupancy_rate": occupancy_rate,
+        "estimated_revenue": round(estimated_revenue, 2),
+    }
+
+
+@router.get("/payment-accounts")
+def list_payment_accounts(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    return session.exec(select(PaymentAccount)).all()
 
 
 # Staff
@@ -163,6 +294,11 @@ def add_receipt(guest_id: int, payload: GuestReceiptCreate, user: dict = Depends
     session.commit()
     session.refresh(receipt)
     return receipt
+
+
+@router.get("/guests/{guest_id}/receipts")
+def list_receipts(guest_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    return session.exec(select(GuestReceipt).where(GuestReceipt.guest_id == guest_id)).all()
 
 
 @router.delete("/guests/{guest_id}/receipts/{receipt_id}")

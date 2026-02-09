@@ -5,28 +5,47 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { getRooms, updateRoomAvailability } from '@/lib/mockData';
-import { Room } from '@/types/hotel';
+import { erpListRooms, erpUpdateRoom } from '@/lib/erp-api';
+import { getERPToken } from '@/lib/erp-auth';
+import { Room as HotelRoom } from '@/types/hotel';
 import { BedDouble, Users, LayoutGrid, Map } from 'lucide-react';
 import { FloorPlanView } from './FloorPlanView';
 
 export function RoomsModule() {
   const { toast } = useToast();
-  const [rooms, setRooms] = useState(getRooms());
+  const [rooms, setRooms] = useState<HotelRoom[]>([]);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [view, setView] = useState<'grid' | 'floorplan'>('floorplan');
 
   // Real-time polling every 5 seconds
+  const refresh = async () => {
+    const token = getERPToken();
+    if (!token) return;
+    const data = await erpListRooms(token);
+    const mapped: HotelRoom[] = data.map((r: any) => ({
+      id: String(r.id),
+      room_number: String(r.id),
+      type: r.room_type,
+      name: r.name,
+      description: "",
+      price_per_night: r.price,
+      capacity: r.capacity,
+      features: r.amenities ? String(r.amenities).split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+      image_url: r.image_url,
+      is_available: r.is_available,
+    }));
+    setRooms(mapped);
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => setRooms(getRooms()), 5000);
-    return () => clearInterval(interval);
+    refresh().catch(() => undefined);
   }, []);
 
-  const refresh = () => setRooms(getRooms());
-
-  const toggleAvailability = (room: Room) => {
-    updateRoomAvailability(room.id, !room.is_available);
+  const toggleAvailability = async (room: HotelRoom) => {
+    const token = getERPToken();
+    if (!token) return;
+    await erpUpdateRoom(token, Number(room.id), { is_available: !room.is_available });
     toast({ title: `Room ${room.room_number} ${!room.is_available ? 'available' : 'unavailable'}` });
     refresh();
   };
