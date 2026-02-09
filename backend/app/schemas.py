@@ -127,6 +127,20 @@ class InventoryUpdate(BaseModel):
     unit: str | None = None
     status: str | None = None
 
+class AnnouncementCreate(BaseModel):
+    title: str
+    message: str
+    audience: str = "staff"  # staff | public | all
+    is_active: bool = True
+    expires_at: datetime | None = None
+
+class AnnouncementUpdate(BaseModel):
+    title: str | None = None
+    message: str | None = None
+    audience: str | None = None
+    is_active: bool | None = None
+    expires_at: datetime | None = None
+
 class GuestProfileCreate(BaseModel):
     guest_name: str
     email: str

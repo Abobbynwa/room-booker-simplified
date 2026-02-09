@@ -11,14 +11,16 @@ import { AnalyticsModule } from '@/components/erp/AnalyticsModule';
 import { SettingsModule } from '@/components/erp/SettingsModule';
 import { PaymentsModule } from '@/components/erp/PaymentsModule';
 import { InventoryModule } from '@/components/erp/InventoryModule';
+import { AnnouncementsModule } from '@/components/erp/AnnouncementsModule';
 import { getERPUser, clearERPAuth, hasAccess, ERPUser, getERPToken, setERPAuth, getEffectiveRole, setERPViewAsRole, getERPViewAsRole, getRoleModules } from '@/lib/erp-auth';
-import { erpMe } from '@/lib/erp-api';
+import { erpMe, erpListAnnouncements } from '@/lib/erp-api';
 import { Loader2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROLE_OPTIONS } from '@/lib/erp-constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ERPDashboard = () => {
   const navigate = useNavigate();
@@ -28,6 +30,8 @@ const ERPDashboard = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewAsRole, setViewAsRole] = useState<string | null>(getERPViewAsRole());
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
 
   useEffect(() => {
     const u = getERPUser();
@@ -46,6 +50,19 @@ const ERPDashboard = () => {
       navigate('/erp/login');
     });
   }, [navigate]);
+
+  useEffect(() => {
+    const token = getERPToken();
+    if (!token) return;
+    erpListAnnouncements(token).then(list => {
+      const dismissed = JSON.parse(localStorage.getItem("erp_announcements_dismissed") || "[]");
+      const visible = (list || []).filter((a: any) => !dismissed.includes(a.id));
+      if (visible.length > 0) {
+        setAnnouncements(visible);
+        setShowAnnouncements(true);
+      }
+    }).catch(() => undefined);
+  }, []);
 
   const handleSignOut = () => {
     clearERPAuth();
@@ -76,6 +93,7 @@ const ERPDashboard = () => {
       case 'housekeeping': return <HousekeepingModule />;
       case 'payments': return <PaymentsModule />;
       case 'inventory': return <InventoryModule />;
+      case 'announcements': return <AnnouncementsModule />;
       case 'staff': return <StaffModule />;
       case 'analytics': return <AnalyticsModule />;
       case 'settings': return <SettingsModule user={user} />;
@@ -150,6 +168,31 @@ const ERPDashboard = () => {
               </CardContent>
             </Card>
           )}
+          <Dialog open={showAnnouncements} onOpenChange={setShowAnnouncements}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Announcement</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                {announcements.map(a => (
+                  <div key={a.id} className="rounded-md border border-border p-3">
+                    <div className="font-medium">{a.title}</div>
+                    <div className="text-sm text-muted-foreground">{a.message}</div>
+                  </div>
+                ))}
+                <Button
+                  onClick={() => {
+                    const dismissed = JSON.parse(localStorage.getItem("erp_announcements_dismissed") || "[]");
+                    const ids = announcements.map(a => a.id);
+                    localStorage.setItem("erp_announcements_dismissed", JSON.stringify([...dismissed, ...ids]));
+                    setShowAnnouncements(false);
+                  }}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           {renderModule()}
         </main>
       </div>

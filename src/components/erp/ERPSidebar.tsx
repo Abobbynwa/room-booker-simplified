@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Home, Settings, Sparkles, Users, LogOut, Wallet, Boxes } from 'lucide-react';
+import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Home, Settings, Sparkles, Users, LogOut, Wallet, Boxes, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ERPUser, hasAccess } from '@/lib/erp-auth';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ const modules = [
   { id: 'housekeeping', label: 'Housekeeping', icon: Sparkles },
   { id: 'inventory', label: 'Inventory', icon: Boxes },
   { id: 'staff', label: 'Staff', icon: Users },
+  { id: 'announcements', label: 'Announcements', icon: Megaphone },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];

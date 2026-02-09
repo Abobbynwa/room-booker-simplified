@@ -146,6 +146,22 @@ export function erpDeleteInventory(token: string, id: number) {
   return api(`/api/erp/inventory/${id}`, token, { method: "DELETE" });
 }
 
+export function erpListAnnouncements(token: string) {
+  return api<any[]>("/api/erp/announcements", token);
+}
+
+export function erpCreateAnnouncement(token: string, payload: any) {
+  return api("/api/erp/announcements", token, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function erpUpdateAnnouncement(token: string, id: number, payload: any) {
+  return api(`/api/erp/announcements/${id}`, token, { method: "PUT", body: JSON.stringify(payload) });
+}
+
+export function erpDeleteAnnouncement(token: string, id: number) {
+  return api(`/api/erp/announcements/${id}`, token, { method: "DELETE" });
+}
+
 export function erpListBookings(token: string) {
   return api<any[]>("/api/erp/bookings", token);
 }

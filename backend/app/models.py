@@ -139,3 +139,12 @@ class InventoryItem(SQLModel, table=True):
     unit: str = "pcs"
     status: str = "available"  # available | low | out
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Announcement(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    message: str
+    audience: str = "staff"  # staff | public | all
+    is_active: bool = True
+    expires_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)

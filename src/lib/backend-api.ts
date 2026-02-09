@@ -54,6 +54,12 @@ interface PaymentAccountPayload {
   instructions?: string | null;
 }
 
+export async function fetchPublicAnnouncements(): Promise<any[]> {
+  const response = await fetch(`${BACKEND_URL}/api/public/announcements`);
+  if (!response.ok) return [];
+  return response.json();
+}
+
 /**
  * Submit a booking via the FastAPI backend
  */

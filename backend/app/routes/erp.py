@@ -19,6 +19,7 @@ from ..models import (
     BookingMeta,
     PaymentAccount,
     InventoryItem,
+    Announcement,
 )
 from ..schemas import (
     ERPLogin,
@@ -39,6 +40,8 @@ from ..schemas import (
     StaffDocumentCreate,
     InventoryCreate,
     InventoryUpdate,
+    AnnouncementCreate,
+    AnnouncementUpdate,
 )
 from ..utils.security import verify_password, create_access_token, decode_access_token, hash_password
 import secrets
@@ -537,3 +540,57 @@ def delete_inventory_item(item_id: int, user: dict = Depends(_get_current_erp_us
     session.delete(item)
     session.commit()
     return {"message": "Inventory item deleted"}
+
+
+# Announcements
+@router.get("/announcements")
+def list_announcements(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    now = datetime.utcnow()
+    if user.get("role") == "admin":
+        return session.exec(select(Announcement)).all()
+    announcements = session.exec(select(Announcement)).all()
+    filtered = []
+    for a in announcements:
+        if not a.is_active:
+            continue
+        if a.expires_at and a.expires_at < now:
+            continue
+        if a.audience not in ("staff", "all"):
+            continue
+        filtered.append(a)
+    return filtered
+
+
+@router.post("/announcements")
+def create_announcement(payload: AnnouncementCreate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_admin(user)
+    ann = Announcement(**payload.model_dump())
+    session.add(ann)
+    session.commit()
+    session.refresh(ann)
+    return ann
+
+
+@router.put("/announcements/{ann_id}")
+def update_announcement(ann_id: int, payload: AnnouncementUpdate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_admin(user)
+    ann = session.get(Announcement, ann_id)
+    if not ann:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(ann, key, value)
+    session.add(ann)
+    session.commit()
+    session.refresh(ann)
+    return ann
+
+
+@router.delete("/announcements/{ann_id}")
+def delete_announcement(ann_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_admin(user)
+    ann = session.get(Announcement, ann_id)
+    if not ann:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    session.delete(ann)
+    session.commit()
+    return {"message": "Announcement deleted"}
