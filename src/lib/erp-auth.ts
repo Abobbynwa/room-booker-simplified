@@ -30,8 +30,8 @@ export function clearERPAuth() {
 
 const ROLE_ACCESS: Record<string, string[]> = {
   admin: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "staff", "analytics", "settings", "inventory", "payments", "announcements"],
-  manager: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "staff", "analytics", "settings", "payments", "inventory", "announcements"],
-  assistant_manager: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "staff", "analytics", "settings", "payments", "inventory", "announcements"],
+  manager: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "analytics", "payments", "inventory"],
+  assistant_manager: ["dashboard", "bookings", "rooms", "check-in", "housekeeping", "analytics", "payments", "inventory"],
   receptionist: ["dashboard", "bookings", "check-in", "rooms"],
   concierge: ["dashboard", "bookings", "check-in", "rooms"],
   accountant: ["dashboard", "payments", "analytics", "settings"],
@@ -48,7 +48,7 @@ const ROLE_ACCESS: Record<string, string[]> = {
   room_service: ["dashboard", "inventory"],
   events_banquets: ["dashboard", "bookings", "inventory"],
   it_support: ["dashboard", "rooms"],
-  hr_officer: ["dashboard", "staff", "announcements"],
+  hr_officer: ["dashboard", "staff"],
   sales_marketing: ["dashboard", "bookings", "analytics"],
 };
 
