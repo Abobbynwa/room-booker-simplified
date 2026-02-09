@@ -49,7 +49,7 @@ export function Header() {
         <div className="flex items-center justify-between h-20">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl md:text-3xl font-serif font-bold text-gold">
-              Luxe Haven
+              Abobby Nwa Suite
             </span>
           </Link>
 

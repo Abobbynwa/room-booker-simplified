@@ -7,7 +7,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-2xl font-serif font-bold text-gold mb-4">Luxe Haven</h3>
+            <h3 className="text-2xl font-serif font-bold text-gold mb-4">Abobby Nwa Suite</h3>
             <p className="text-muted-foreground leading-relaxed">
               Experience unparalleled luxury and comfort at our prestigious hotel. 
               Where elegance meets exceptional service.
@@ -60,7 +60,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground text-sm">
-          <p>© {new Date().getFullYear()} Luxe Haven Hotel. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Abobby Nwa Suite. All rights reserved.</p>
         </div>
       </div>
     </footer>
