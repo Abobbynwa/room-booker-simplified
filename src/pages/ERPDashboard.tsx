@@ -37,7 +37,7 @@ const ERPDashboard = () => {
     const u = getERPUser();
     const token = getERPToken();
     if (!u || !token) {
-      navigate('/erp/login');
+      navigate('/erp/login?access=erp');
       return;
     }
     setUser(u);
@@ -47,7 +47,7 @@ const ERPDashboard = () => {
       setERPAuth(token, me);
     }).catch(() => {
       clearERPAuth();
-      navigate('/erp/login');
+      navigate('/erp/login?access=erp');
     });
   }, [navigate]);
 
@@ -67,7 +67,7 @@ const ERPDashboard = () => {
   const handleSignOut = () => {
     clearERPAuth();
     toast({ title: 'Signed out' });
-    navigate('/erp/login');
+    navigate('/erp/login?access=erp');
   };
 
   const handleModuleChange = (module: string) => {

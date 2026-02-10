@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,12 +21,18 @@ const ERPLogin = () => {
   const [mode, setMode] = useState<'staff' | 'admin'>('staff');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('access') !== 'erp') {
+      navigate('/');
+      return;
+    }
     const user = getERPUser();
     if (user) navigate('/erp');
-  }, [navigate]);
+  }, [navigate, location.search]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

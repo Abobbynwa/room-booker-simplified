@@ -207,7 +207,7 @@ const Admin = () => {
               </CardHeader>
               <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
                 <div>Admin can access the full ERP interface using the same admin credentials.</div>
-                <Button className="w-fit" onClick={() => window.open('/#/erp/login', '_blank')}>
+                <Button className="w-fit" onClick={() => window.open('/#/erp/login?access=erp', '_blank')}>
                   Open ERP
                 </Button>
               </CardContent>
