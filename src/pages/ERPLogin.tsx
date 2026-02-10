@@ -24,7 +24,14 @@ const ERPLogin = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('access') !== 'erp') {
+    const accessFlagOk = params.get('access') === 'erp';
+    const hasErpToken = !!localStorage.getItem('erp_token');
+    const hasAdminToken = !!localStorage.getItem('admin_token');
+    // Hide the ERP login page from casual/public visits, but still allow:
+    // - direct access via the special query flag
+    // - already-authenticated ERP users
+    // - admins coming from the admin panel (admin_token)
+    if (!accessFlagOk && !hasErpToken && !hasAdminToken) {
       navigate('/');
       return;
     }
