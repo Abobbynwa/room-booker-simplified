@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { erpLogin, erpStaffLogin } from '@/lib/erp-api';
@@ -59,7 +57,12 @@ const ERPLogin = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="font-serif font-bold text-gold text-xl">Abobby Nwa Suite</div>
+          <div className="text-xs text-muted-foreground">ERP Portal</div>
+        </div>
+      </header>
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md border-primary/20">
           <CardHeader className="text-center">
@@ -112,7 +115,11 @@ const ERPLogin = () => {
           </CardContent>
         </Card>
       </main>
-      <Footer />
+      <footer className="border-t border-border bg-card">
+        <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Abobby Nwa Suite. Staff access only.
+        </div>
+      </footer>
     </div>
   );
 };
