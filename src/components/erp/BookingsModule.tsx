@@ -9,16 +9,19 @@ import { erpListBookings, erpUpdateBookingStatus, erpUpdatePaymentProof } from '
 import { getERPToken } from '@/lib/erp-auth';
 import { uploadPaymentProof } from '@/lib/erp-upload';
 import { Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Booking = {
   id: number;
+  reference_number?: string;
   name: string;
   email: string;
   room_type: string;
   check_in: string;
   check_out: string;
   created_at: string;
+  amount?: number;
   status: string;
   payment_status: string;
   payment_proof?: string | null;
@@ -29,6 +32,7 @@ export function BookingsModule() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState('all');
   const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const refresh = async () => {
     const token = getERPToken();
@@ -71,7 +75,11 @@ export function BookingsModule() {
     refresh();
   };
 
-  const filtered = filter === 'all' ? bookings : bookings.filter(b => b.status === filter);
+  const filtered = bookings.filter(b => {
+    const matchesFilter = filter === 'all' || (filter === 'past' ? ['completed', 'cancelled'].includes(b.status) : b.status === filter);
+    const haystack = `${b.name} ${b.email} ${b.room_type} ${b.id}`.toLowerCase();
+    return matchesFilter && haystack.includes(query.toLowerCase());
+  });
 
   const statusColor = (s: string) => {
     const map: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = { pending: 'secondary', confirmed: 'default', cancelled: 'destructive', completed: 'outline' };
@@ -85,7 +93,7 @@ export function BookingsModule() {
           <h1 className="text-2xl font-serif font-bold">Bookings</h1>
           <p className="text-sm text-muted-foreground">{bookings.length} total bookings</p>
         </div>
-        <Select value={filter} onValueChange={setFilter}>
+        <div className="flex flex-wrap gap-2"><Input className="w-56" placeholder="Search guest, email or ID" value={query} onChange={e => setQuery(e.target.value)} /><Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
@@ -93,8 +101,9 @@ export function BookingsModule() {
             <SelectItem value="confirmed">Confirmed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="past">Past bookings</SelectItem>
           </SelectContent>
-        </Select>
+        </Select></div>
       </div>
 
       <Card>
@@ -119,7 +128,7 @@ export function BookingsModule() {
                 ) : filtered.map(b => {
                   return (
                     <TableRow key={b.id}>
-                      <TableCell className="font-mono text-xs">BK-{b.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{b.reference_number || `BK-${b.id}`}</TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium text-sm">{b.name}</p>
@@ -128,7 +137,11 @@ export function BookingsModule() {
                       </TableCell>
                       <TableCell className="text-sm">{b.room_type}</TableCell>
                       <TableCell className="text-xs">{b.check_in}<br />→ {b.check_out}</TableCell>
-                      <TableCell className="font-medium">—</TableCell>
+                      <TableCell className="font-medium">
+                        {typeof b.amount === 'number'
+                          ? new Intl.NumberFormat('en-NG', {style: 'currency', currency: 'NGN', maximumFractionDigits: 0}).format(b.amount)
+                          : '—'}
+                      </TableCell>
                       <TableCell>
                         <Select value={b.status} onValueChange={v => handleStatusChange(b.id, v as any)}>
                           <SelectTrigger className="w-28 h-7 text-xs"><SelectValue /></SelectTrigger>
@@ -142,13 +155,16 @@ export function BookingsModule() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Badge variant={b.payment_status === 'confirmed' ? 'default' : 'secondary'} className="capitalize text-xs">{b.payment_status}</Badge>
+                          <Badge variant={b.payment_status === 'paid' || b.payment_status === 'confirmed' ? 'default' : 'secondary'} className="capitalize text-xs">{b.payment_status}</Badge>
                           {b.payment_proof && (
                             <Button size="sm" variant="ghost" onClick={() => viewProof(b.payment_proof)}>
                               <Eye className="h-3 w-3" />
                             </Button>
                           )}
-                          {b.payment_status === 'pending' && (
+                          {!b.payment_proof && (
+                            <span className="text-[10px] text-muted-foreground">No proof</span>
+                          )}
+                          {(b.payment_status === 'pending' || b.payment_status === 'unpaid') && (
                             <Button size="sm" variant="outline" className="text-xs h-6" onClick={() => handlePaymentConfirm(b.id)}>
                               Confirm
                             </Button>

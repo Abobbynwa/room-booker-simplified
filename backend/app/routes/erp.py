@@ -99,7 +99,28 @@ def erp_me(user: dict = Depends(_get_current_erp_user)):
 @router.get("/rooms")
 def list_rooms(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
     _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "housekeeping", "laundry", "maintenance", "security", "it_support")
-    return session.exec(select(Room)).all()
+    rooms = session.exec(select(Room)).all()
+    room_prices = {r.room_type.lower(): r.price for r in rooms}
+    bookings = session.exec(select(Booking).order_by(Booking.created_at.desc())).all()
+    metas = session.exec(select(BookingMeta)).all()
+    meta_map = {meta.booking_id: meta for meta in metas}
+    latest_by_type = {}
+    for booking in bookings:
+        if booking.room_type.lower() not in latest_by_type:
+            latest_by_type[booking.room_type.lower()] = booking
+    return [{
+        **room.model_dump(),
+        "latest_booking": ({
+            "id": latest.id,
+            "reference_number": latest.reference_number,
+            "name": latest.name,
+            "email": latest.email,
+            "check_in": latest.check_in,
+            "check_out": latest.check_out,
+            "amount": round(max((latest.check_out - latest.check_in).days, 1) * room_prices.get(latest.room_type.lower(), room.price), 2),
+            "status": meta_map.get(latest.id).status if meta_map.get(latest.id) else "pending",
+        } if (latest := latest_by_type.get(room.room_type.lower())) else None),
+    } for room in rooms]
 
 
 @router.put("/rooms/{room_id}")
@@ -122,19 +143,24 @@ def update_room(room_id: int, payload: dict, user: dict = Depends(_get_current_e
 def list_bookings(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
     _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "accountant", "cashier", "events_banquets", "sales_marketing")
     bookings = session.exec(select(Booking)).all()
+    room_prices = {r.room_type.lower(): r.price for r in session.exec(select(Room)).all()}
     metas = session.exec(select(BookingMeta)).all()
     meta_map = {m.booking_id: m for m in metas}
     enriched = []
     for b in bookings:
         meta = meta_map.get(b.id)
+        nights = max((b.check_out - b.check_in).days, 1)
+        amount = round(nights * room_prices.get(b.room_type.lower(), 0), 2)
         enriched.append({
             "id": b.id,
+            "reference_number": b.reference_number,
             "name": b.name,
             "email": b.email,
             "room_type": b.room_type,
             "check_in": b.check_in,
             "check_out": b.check_out,
             "created_at": b.created_at,
+            "amount": amount,
             "status": meta.status if meta else "pending",
             "payment_status": meta.payment_status if meta else "unpaid",
             "payment_proof": meta.payment_proof if meta else None,
