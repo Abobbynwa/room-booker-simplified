@@ -275,12 +275,18 @@ def create_staff(payload: StaffCreate, user: dict = Depends(_get_current_erp_use
     data = payload.model_dump()
     password = data.pop("password", None)
     staff_code = data.pop("staff_code", None)
+    if not password:
+        raise HTTPException(status_code=400, detail="Admin must assign a password to the staff member")
+    existing_staff = session.exec(
+        select(StaffMember).where(func.lower(StaffMember.email) == payload.email.lower())
+    ).first()
+    if existing_staff:
+        raise HTTPException(status_code=409, detail="A staff account with this email already exists")
     staff = StaffMember(**data)
     if not staff_code:
         staff_code = secrets.token_hex(3).upper()
     staff.staff_code = staff_code
-    if password:
-        staff.password_hash = hash_password(password)
+    staff.password_hash = hash_password(password)
     session.add(staff)
     session.commit()
     session.refresh(staff)
