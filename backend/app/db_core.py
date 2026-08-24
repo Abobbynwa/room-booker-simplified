@@ -9,46 +9,23 @@ load_dotenv()
 
 # Default to SQLite for local testing; change to PostgreSQL when ready
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./roomdb.sqlite")
+# Render and some managed Postgres providers still expose the old scheme.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-def _create_engine_with_fallback(url: str):
-    """Try to create an engine for `url`. If connecting fails, fall back to a local SQLite file.
-
-    This prevents startup crashes for development machines that don't have the
-    production Postgres database available or when the credentials are placeholders.
-    """
-    # If the URL explicitly points to SQLite, just create that engine.
-    try:
-        if url.startswith("sqlite"):
-            return create_engine(url, echo=True)
-
-        # For non-SQLite DBs, try to create an engine and connect briefly.
-        engine = create_engine(url, echo=True)
-        try:
-            # Try a short-lived connection to validate credentials/availability.
-            with engine.connect() as _:
-                pass
-            return engine
-        except Exception as conn_err:
-            logging.warning(
-                "Database connection failed for %s: %s. Falling back to SQLite.",
-                url,
-                conn_err,
-            )
-    except Exception as e:
-        logging.warning("Failed to create engine for %s: %s", url, e)
-
-    fallback = "sqlite:///./roomdb.sqlite"
-    logging.info("Using fallback database: %s", fallback)
-    return create_engine(fallback, echo=True)
-
-
-# Create the SQLModel engine (with a safe fallback)
-engine = _create_engine_with_fallback(DATABASE_URL)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, echo=os.getenv("SQL_ECHO", "false").lower() == "true", connect_args=connect_args)
 
 
 def init_db():
     """Create all tables defined in SQLModel metadata."""
     SQLModel.metadata.create_all(engine)
+
+
+def check_db_connection():
+    """Raise when the configured database cannot be reached."""
+    with engine.connect() as connection:
+        connection.exec_driver_sql("SELECT 1")
 
 
 def get_session():

@@ -55,7 +55,7 @@ deploy_backend() {
     if [ "$ENVIRONMENT" = "production" ]; then
         echo ""
         echo "Starting production server with Gunicorn..."
-        gunicorn -w 4 -b 0.0.0.0:8000 main:app &
+        gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:8000 main:app &
     else
         echo ""
         echo "Starting development server..."

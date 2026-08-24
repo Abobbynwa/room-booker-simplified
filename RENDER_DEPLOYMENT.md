@@ -81,13 +81,15 @@ git push origin main
    - **Region**: Same as database (important!)
    - **Branch**: `main`
    - **Build Command**: `pip install -r backend/requirements.txt`
-   - **Start Command**: `cd backend && gunicorn -w 4 -b 0.0.0.0:$PORT main:app`
+   - **Start Command**: `cd backend && gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT main:app`
    - **Plan**: Free (or Starter)
 
 5. Click **Advanced** and add environment variables:
    ```
    DATABASE_URL = postgresql://user:password@host:5432/roomdb
    SECRET_KEY = <generated-key-from-step-1>
+   ADMIN_INIT_TOKEN = <random-one-time-bootstrap-token>
+   CORS_ORIGINS = https://room-booker-web.onrender.com
    MAIL_USERNAME = valentineagaba16@gmail.com
    MAIL_PASSWORD = <your-gmail-app-password>
    MAIL_FROM = valentineagaba16@gmail.com
@@ -110,11 +112,14 @@ API_URL="https://room-booker-api.onrender.com"
 
 curl -X POST "$API_URL/api/admin/init" \
   -H "Content-Type: application/json" \
+   -H "X-Bootstrap-Token: <random-one-time-bootstrap-token>" \
   -d '{
     "email": "valentineagaba16@gmail.com",
     "password": "YourSecurePassword123"
   }'
 ```
+
+After the admin is created, remove `ADMIN_INIT_TOKEN` from the backend environment and redeploy.
 
 You should get: `"Admin created successfully"`
 

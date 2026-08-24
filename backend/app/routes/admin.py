@@ -45,12 +45,20 @@ def get_current_admin(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 @router.post("/init")
-def init_admin(credentials: AdminLogin, session: Session = Depends(get_session)):
+def init_admin(
+    credentials: AdminLogin,
+    x_bootstrap_token: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
     """Create the first admin user only if no admins exist.
 
     This endpoint is intentionally one-time: it will fail with 403
     once any `AdminUser` exists in the database.
     """
+    expected_token = os.getenv("ADMIN_INIT_TOKEN")
+    if not expected_token or x_bootstrap_token != expected_token:
+        raise HTTPException(status_code=403, detail="Admin bootstrap is disabled")
+
     existing_any = session.exec(select(AdminUser)).first()
     if existing_any:
         raise HTTPException(status_code=403, detail="Admin already initialized")

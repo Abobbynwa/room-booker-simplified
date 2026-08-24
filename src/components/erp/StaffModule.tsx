@@ -298,7 +298,7 @@ export function StaffModule() {
                     <TableCell className="font-mono text-xs">{s.staff_code || '—'}</TableCell>
                     <TableCell>{s.department ? (DEPARTMENT_LABELS[s.department] || DEPARTMENT_LABELS[s.department?.toLowerCase()] || s.department) : '—'}</TableCell>
                     <TableCell className="capitalize">{s.shift}</TableCell>
-                    <TableCell>{formatSalary(s.salary)}</TableCell>
+                    <TableCell>{formatSalary(s.salary ?? 0)}</TableCell>
                     <TableCell><Badge variant={statusColor(s.status)} className="capitalize">{s.status}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">

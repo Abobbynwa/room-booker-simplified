@@ -27,7 +27,6 @@ const BookingStatus = () => {
     e.preventDefault();
     setError('');
     setBooking(null);
-    setRoom(null);
     
     if (!reference.trim()) {
       setError('Please enter a reference number');

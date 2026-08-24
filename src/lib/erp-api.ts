@@ -5,6 +5,8 @@ export type ERPLoginResponse = {
   user: { email: string; role: string; name: string };
 };
 
+type StaffCodeResponse = { staff_code?: string | null };
+
 async function api<T>(path: string, token?: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -43,7 +45,7 @@ export function erpListStaff(token: string) {
 }
 
 export function erpCreateStaff(token: string, payload: any) {
-  return api("/api/erp/staff", token, { method: "POST", body: JSON.stringify(payload) });
+  return api<StaffCodeResponse>("/api/erp/staff", token, { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function erpUpdateStaff(token: string, id: number, payload: any) {
@@ -55,7 +57,7 @@ export function erpDeleteStaff(token: string, id: number) {
 }
 
 export function erpResetStaffCode(token: string, id: number) {
-  return api(`/api/erp/staff/${id}/reset-code`, token, { method: "POST" });
+  return api<StaffCodeResponse>(`/api/erp/staff/${id}/reset-code`, token, { method: "POST" });
 }
 
 export function erpListGuests(token: string) {
