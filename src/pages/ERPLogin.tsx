@@ -14,7 +14,6 @@ import { ROLE_OPTIONS } from '@/lib/erp-constants';
 const ERPLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('receptionist');
   const [staffPassword, setStaffPassword] = useState('');
   const [mode, setMode] = useState<'staff' | 'admin'>('staff');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,14 +43,14 @@ const ERPLogin = () => {
     if (mode === 'admin') {
       if (!email || !password) { toast({ title: 'Enter email and password', variant: 'destructive' }); return; }
     } else {
-      if (!role || !staffPassword) { toast({ title: 'Select role and enter password', variant: 'destructive' }); return; }
+      if (!email || !staffPassword) { toast({ title: 'Enter your staff email and password', variant: 'destructive' }); return; }
     }
     setIsSubmitting(true);
     
     try {
       const result = mode === 'admin'
         ? await erpLogin(email, password)
-        : await erpStaffLogin(role, staffPassword);
+        : await erpStaffLogin(email, staffPassword);
       setERPAuth(result.access_token, result.user);
       toast({ title: 'Welcome back!', description: `Signed in as ${result.user.role}` });
       navigate('/erp');
@@ -99,15 +98,8 @@ const ERPLogin = () => {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select value={role} onValueChange={setRole}>
-                      <SelectTrigger id="role"><SelectValue placeholder="Select role" /></SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map(r => (
-                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="staff_email">Staff email</Label>
+                    <Input id="staff_email" type="email" placeholder="your.email@hotel.com" value={email} onChange={e => setEmail(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="staff_password">Password</Label>

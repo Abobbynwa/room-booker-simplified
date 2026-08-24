@@ -11,7 +11,6 @@ import BookRoom from "./pages/BookRoom";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import BookingStatus from "./pages/BookingStatus";
 import Contact from "./pages/Contact";
-import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AdminApp from "./pages/AdminApp";
@@ -41,14 +40,7 @@ const App = () => (
             <Route path="/erp" element={<ERPDashboard />} />
             <Route path="/admin-app/login" element={<Navigate to="/erp/login?access=erp" replace />} />
             <Route path="/admin-app" element={<ERPDashboard />} />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute requireAdmin>
-                  <Admin />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="/admin" element={<Navigate to="/admin-app" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

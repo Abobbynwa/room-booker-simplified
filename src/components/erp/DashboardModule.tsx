@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BedDouble, CalendarCheck, DollarSign, Users, TrendingUp, Sparkles } from 'lucide-react';
 import { erpReportSummary, erpListStaff, erpListHousekeeping, erpListCheckins, erpListRooms } from '@/lib/erp-api';
-import { getERPToken } from '@/lib/erp-auth';
+import { getERPToken, getERPUser } from '@/lib/erp-auth';
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price);
@@ -17,14 +17,13 @@ export function DashboardModule() {
   useEffect(() => {
     const token = getERPToken();
     if (!token) return;
+    const user = getERPUser();
     Promise.all([
       erpReportSummary(token),
-      erpListStaff(token),
       erpListHousekeeping(token),
       erpListCheckins(token),
       erpListRooms(token),
-    ]).then(([report, staff, tasks, checkins, rooms]) => {
-      const activeStaff = staff.filter((s: any) => s.status === 'active').length;
+    ]).then(([report, tasks, checkins, rooms]) => {
       const pending = tasks.filter((t: any) => t.status === 'pending').length;
       const inProgress = tasks.filter((t: any) => t.status === 'in_progress').length;
       const completed = tasks.filter((t: any) => t.status === 'completed').length;
@@ -40,9 +39,13 @@ export function DashboardModule() {
         { label: 'Total Bookings', value: report.total_bookings || 0, icon: CalendarCheck, color: 'text-blue-600' },
         { label: 'Occupancy Rate', value: `${((report.occupancy_rate || 0) * 100).toFixed(1)}%`, icon: TrendingUp, color: 'text-primary' },
         { label: 'Occupied Rooms', value: `${occupiedRooms}/${rooms.length}`, icon: BedDouble, color: 'text-orange-600' },
-        { label: 'Active Staff', value: activeStaff, icon: Users, color: 'text-purple-600' },
         { label: 'Pending Tasks', value: pending, icon: Sparkles, color: 'text-red-600' },
       ]);
+      if (user?.role === 'admin') {
+        erpListStaff(token).then(staff => {
+          setStats(current => [...current, { label: 'Active Staff', value: staff.filter((s: any) => s.status === 'active').length, icon: Users, color: 'text-purple-600' }]);
+        }).catch(() => undefined);
+      }
     }).catch(() => undefined);
   }, []);
 

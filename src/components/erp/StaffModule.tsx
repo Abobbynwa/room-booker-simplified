@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { erpListStaff, erpCreateStaff, erpDeleteStaff, erpUpdateStaff, erpListStaffDocuments, erpAddStaffDocument, erpDeleteStaffDocument, erpResetStaffCode } from '@/lib/erp-api';
-import { getERPToken } from '@/lib/erp-auth';
+import { getERPToken, getERPUser } from '@/lib/erp-auth';
 import { uploadStaffDocument } from '@/lib/erp-upload';
 import { ROLE_OPTIONS, DEPARTMENT_OPTIONS, ROLE_LABELS, DEPARTMENT_LABELS, GENDER_OPTIONS, NIGERIA_STATES } from '@/lib/erp-constants';
 import { Plus, Trash2, Edit } from 'lucide-react';
@@ -40,6 +40,7 @@ type StaffDocument = { id: number; name: string; url: string; uploaded_at: strin
 
 export function StaffModule() {
   const { toast } = useToast();
+  const canManageStaff = getERPUser()?.role === 'admin';
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -164,7 +165,7 @@ export function StaffModule() {
           <h1 className="text-2xl font-serif font-bold">Staff Management</h1>
           <p className="text-sm text-muted-foreground">{staff.length} staff members</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        {canManageStaff && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Add Staff</Button>
           </DialogTrigger>
@@ -266,7 +267,7 @@ export function StaffModule() {
               <Button onClick={handleCreate} className="w-full">Add Staff Member</Button>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card>
@@ -287,7 +288,7 @@ export function StaffModule() {
               </TableHeader>
               <TableBody>
                 {staff.map(s => (
-                  <TableRow key={s.id}>
+                  <TableRow key={s.id} className="cursor-pointer" onClick={() => openDetails(s)}>
                     <TableCell>
                       <div>
                         <p className="font-medium">{s.name}</p>
@@ -302,16 +303,14 @@ export function StaffModule() {
                     <TableCell><Badge variant={statusColor(s.status)} className="capitalize">{s.status}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => toggleStatus(s)}>
-                          {s.status === 'active' ? 'Deactivate' : 'Activate'}
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => openDetails(s)}>
+                        <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); openDetails(s); }}>
                           Details
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => openDocuments(s)}>
+                        {canManageStaff && <><Button size="sm" variant="ghost" onClick={() => toggleStatus(s)}>
+                          {s.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </Button><Button size="sm" variant="ghost" onClick={() => openDocuments(s)}>
                           Documents
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={async () => {
+                        </Button><Button size="sm" variant="ghost" onClick={async () => {
                           const newPassword = window.prompt("Set new staff password");
                           if (!newPassword) return;
                           const token = getERPToken();
@@ -320,8 +319,7 @@ export function StaffModule() {
                           toast({ title: 'Password updated' });
                         }}>
                           Reset Password
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={async () => {
+                        </Button><Button size="sm" variant="ghost" onClick={async () => {
                           const token = getERPToken();
                           if (!token) return;
                           const res = await erpResetStaffCode(token, s.id);
@@ -329,10 +327,9 @@ export function StaffModule() {
                           refresh();
                         }}>
                           Reset ID
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)}>
+                        </Button><Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)}>
                           <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </Button></>}
                       </div>
                     </TableCell>
                   </TableRow>

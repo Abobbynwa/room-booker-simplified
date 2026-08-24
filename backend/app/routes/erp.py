@@ -63,6 +63,11 @@ def _require_admin(user: dict):
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
 
+def _require_module(user: dict, *roles: str):
+    if user.get("role") not in roles and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="You do not have access to this module")
+
+
 @router.post("/login")
 def erp_login(payload: ERPLogin, session: Session = Depends(get_session)):
     # Admin login (email + password)
@@ -72,25 +77,15 @@ def erp_login(payload: ERPLogin, session: Session = Depends(get_session)):
             token = create_access_token({"sub": admin.email, "role": "admin", "name": admin.email})
             return {"access_token": token, "user": {"email": admin.email, "role": "admin", "name": admin.email}}
 
-    # Staff login (role + password, no staff ID)
-    if payload.role and payload.password and not payload.email:
-        role = payload.role.lower()
-        staff_list = session.exec(
-            select(StaffMember).where(func.lower(StaffMember.role) == role)
-        ).all()
-        matches = []
-        for staff in staff_list:
-            if staff.status != "active":
-                continue
-            if staff.password_hash and verify_password(payload.password, staff.password_hash):
-                matches.append(staff)
-        if len(matches) == 0:
-            raise HTTPException(status_code=401, detail="Invalid role or password")
-        if len(matches) > 1:
-            raise HTTPException(status_code=409, detail="Multiple staff match this role/password. Ask admin to reset passwords.")
-        staff = matches[0]
-        token = create_access_token({"sub": staff.email, "role": role, "name": staff.name})
-        return {"access_token": token, "user": {"email": staff.email, "role": role, "name": staff.name}}
+    # Staff login uses each employee's unique email and password.
+    if payload.email and payload.password:
+        staff = session.exec(
+            select(StaffMember).where(func.lower(StaffMember.email) == payload.email.lower())
+        ).first()
+        if staff and staff.status == "active" and staff.password_hash and verify_password(payload.password, staff.password_hash):
+            role = staff.role.lower()
+            token = create_access_token({"sub": staff.email, "role": role, "name": staff.name})
+            return {"access_token": token, "user": {"email": staff.email, "role": role, "name": staff.name}}
 
     raise HTTPException(status_code=400, detail="Invalid login payload")
 
@@ -103,11 +98,13 @@ def erp_me(user: dict = Depends(_get_current_erp_user)):
 # Rooms
 @router.get("/rooms")
 def list_rooms(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "housekeeping", "laundry", "maintenance", "security", "it_support")
     return session.exec(select(Room)).all()
 
 
 @router.put("/rooms/{room_id}")
 def update_room(room_id: int, payload: dict, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager")
     room = session.get(Room, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -123,6 +120,7 @@ def update_room(room_id: int, payload: dict, user: dict = Depends(_get_current_e
 # Bookings
 @router.get("/bookings")
 def list_bookings(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "events_banquets", "sales_marketing")
     bookings = session.exec(select(Booking)).all()
     metas = session.exec(select(BookingMeta)).all()
     meta_map = {m.booking_id: m for m in metas}
@@ -151,6 +149,7 @@ def update_booking_status(
     user: dict = Depends(_get_current_erp_user),
     session: Session = Depends(get_session),
 ):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "accountant", "cashier", "events_banquets")
     meta = session.exec(select(BookingMeta).where(BookingMeta.booking_id == booking_id)).first()
     if not meta:
         meta = BookingMeta(booking_id=booking_id)
@@ -170,6 +169,7 @@ def update_booking_proof(
     user: dict = Depends(_get_current_erp_user),
     session: Session = Depends(get_session),
 ):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "accountant", "cashier", "events_banquets")
     meta = session.exec(select(BookingMeta).where(BookingMeta.booking_id == booking_id)).first()
     if not meta:
         meta = BookingMeta(booking_id=booking_id)
@@ -183,6 +183,7 @@ def update_booking_proof(
 # Reports
 @router.get("/reports/summary")
 def report_summary(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "accountant", "cashier", "sales_marketing")
     bookings = session.exec(select(Booking)).all()
     rooms = session.exec(select(Room)).all()
 
@@ -221,13 +222,50 @@ def report_summary(user: dict = Depends(_get_current_erp_user), session: Session
 
 @router.get("/payment-accounts")
 def list_payment_accounts(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "accountant", "cashier")
     return session.exec(select(PaymentAccount)).all()
+
+
+@router.post("/payment-accounts")
+def create_payment_account(payload: dict, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "accountant")
+    account = PaymentAccount(**payload)
+    session.add(account)
+    session.commit()
+    session.refresh(account)
+    return account
+
+
+@router.put("/payment-accounts/{account_id}")
+def update_payment_account(account_id: int, payload: dict, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "accountant")
+    account = session.get(PaymentAccount, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Payment account not found")
+    for key, value in payload.items():
+        if hasattr(account, key):
+            setattr(account, key, value)
+    session.add(account)
+    session.commit()
+    session.refresh(account)
+    return account
+
+
+@router.delete("/payment-accounts/{account_id}")
+def delete_payment_account(account_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "accountant")
+    account = session.get(PaymentAccount, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Payment account not found")
+    session.delete(account)
+    session.commit()
+    return {"message": "Payment account deleted"}
 
 
 # Staff
 @router.get("/staff")
 def list_staff(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
-    _require_admin(user)
+    _require_module(user, "hr_officer")
     return session.exec(select(StaffMember)).all()
 
 

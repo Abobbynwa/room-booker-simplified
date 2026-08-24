@@ -29,10 +29,10 @@ export function erpLogin(email: string, password: string) {
   });
 }
 
-export function erpStaffLogin(role: string, password: string) {
+export function erpStaffLogin(email: string, password: string) {
   return api<ERPLoginResponse>("/api/erp/login", undefined, {
     method: "POST",
-    body: JSON.stringify({ role, password }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
@@ -190,6 +190,18 @@ export function erpReportSummary(token: string) {
 
 export function erpListPaymentAccounts(token: string) {
   return api<any[]>("/api/erp/payment-accounts", token);
+}
+
+export function erpCreatePaymentAccount(token: string, payload: any) {
+  return api("/api/erp/payment-accounts", token, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function erpUpdatePaymentAccount(token: string, id: number, payload: any) {
+  return api(`/api/erp/payment-accounts/${id}`, token, { method: "PUT", body: JSON.stringify(payload) });
+}
+
+export function erpDeletePaymentAccount(token: string, id: number) {
+  return api(`/api/erp/payment-accounts/${id}`, token, { method: "DELETE" });
 }
 
 export function erpListStaffDocuments(token: string, staffId: number) {
