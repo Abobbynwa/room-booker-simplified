@@ -41,6 +41,10 @@ const ERPDashboard = () => {
       return;
     }
     setUser(u);
+    if (u.role === 'admin') {
+      setViewAsRole(null);
+      setERPViewAsRole(null);
+    }
     setLoading(false);
     erpMe(token).then(me => {
       setUser(me);
