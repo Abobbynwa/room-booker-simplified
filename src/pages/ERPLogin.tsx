@@ -8,14 +8,12 @@ import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { erpLogin, erpStaffLogin } from '@/lib/erp-api';
 import { getERPUser, setERPAuth } from '@/lib/erp-auth';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ROLE_OPTIONS } from '@/lib/erp-constants';
 
 const ERPLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
-  const [mode, setMode] = useState<'staff' | 'admin'>('staff');
+  const [mode, setMode] = useState<'staff' | 'admin'>(() => new URLSearchParams(window.location.search).get('mode') === 'admin' ? 'admin' : 'staff');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,6 +34,7 @@ const ERPLogin = () => {
     }
     const user = getERPUser();
     if (user) navigate('/erp');
+    if (params.get('mode') === 'admin') setMode('admin');
   }, [navigate, location.search]);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -52,6 +51,7 @@ const ERPLogin = () => {
         ? await erpLogin(email, password)
         : await erpStaffLogin(email, staffPassword);
       setERPAuth(result.access_token, result.user);
+      if (result.user.role === 'admin') localStorage.removeItem('erp_view_as_role');
       toast({ title: 'Welcome back!', description: `Signed in as ${result.user.role}` });
       navigate('/erp');
     } catch (error) {

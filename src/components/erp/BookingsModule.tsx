@@ -52,7 +52,7 @@ export function BookingsModule() {
   const handlePaymentConfirm = async (id: number) => {
     const token = getERPToken();
     if (!token) return;
-    await erpUpdateBookingStatus(token, id, { status: "confirmed", payment_status: "confirmed" });
+    await erpUpdateBookingStatus(token, id, { status: "confirmed", payment_status: "paid" });
     toast({ title: 'Payment confirmed' });
     refresh();
   };

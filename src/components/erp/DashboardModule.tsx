@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BedDouble, CalendarCheck, DollarSign, Users, TrendingUp, Sparkles } from 'lucide-react';
 import { erpReportSummary, erpListStaff, erpListHousekeeping, erpListCheckins, erpListRooms } from '@/lib/erp-api';
-import { getERPToken, getERPUser } from '@/lib/erp-auth';
+import { getERPToken, getERPUser, hasAccess } from '@/lib/erp-auth';
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price);
@@ -18,12 +18,11 @@ export function DashboardModule() {
     const token = getERPToken();
     if (!token) return;
     const user = getERPUser();
-    Promise.all([
-      erpReportSummary(token),
-      erpListHousekeeping(token),
-      erpListCheckins(token),
-      erpListRooms(token),
-    ]).then(([report, tasks, checkins, rooms]) => {
+    const reportRequest = hasAccess(user?.role || '', 'analytics') ? erpReportSummary(token) : Promise.resolve({});
+    const taskRequest = hasAccess(user?.role || '', 'housekeeping') ? erpListHousekeeping(token) : Promise.resolve([]);
+    const checkinRequest = hasAccess(user?.role || '', 'check-in') ? erpListCheckins(token) : Promise.resolve([]);
+    const roomRequest = hasAccess(user?.role || '', 'rooms') ? erpListRooms(token) : Promise.resolve([]);
+    Promise.all([reportRequest, taskRequest, checkinRequest, roomRequest]).then(([report, tasks, checkins, rooms]) => {
       const pending = tasks.filter((t: any) => t.status === 'pending').length;
       const inProgress = tasks.filter((t: any) => t.status === 'in_progress').length;
       const completed = tasks.filter((t: any) => t.status === 'completed').length;

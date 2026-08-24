@@ -2,6 +2,7 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from pydantic import EmailStr
 from dotenv import load_dotenv
 import os
+import logging
 
 load_dotenv()
 
@@ -10,8 +11,8 @@ MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
 MAIL_FROM = os.getenv("MAIL_FROM", MAIL_USERNAME)
 MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
-MAIL_STARTTLS = os.getenv("MAIL_STARTTLS", "true").lower() == "true"
-MAIL_SSL_TLS = os.getenv("MAIL_SSL_TLS", "false").lower() == "true"
+MAIL_STARTTLS = os.getenv("MAIL_STARTTLS", os.getenv("MAIL_TLS", "true")).lower() == "true"
+MAIL_SSL_TLS = os.getenv("MAIL_SSL_TLS", os.getenv("MAIL_SSL", "false")).lower() == "true"
 
 def _build_mail_config() -> ConnectionConfig:
     return ConnectionConfig(
@@ -35,6 +36,10 @@ async def send_email(to: EmailStr, subject: str, body: str):
         body=body,
         subtype="html"
     )
-    fm = FastMail(_build_mail_config())
-    await fm.send_message(message)
+    try:
+        fm = FastMail(_build_mail_config())
+        await fm.send_message(message)
+    except Exception:
+        logging.exception("Failed to send email to %s", to)
+        return {"status": "Email failed"}
     return {"status": "Email sent"}

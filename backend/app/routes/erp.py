@@ -120,7 +120,7 @@ def update_room(room_id: int, payload: dict, user: dict = Depends(_get_current_e
 # Bookings
 @router.get("/bookings")
 def list_bookings(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
-    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "events_banquets", "sales_marketing")
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "accountant", "cashier", "events_banquets", "sales_marketing")
     bookings = session.exec(select(Booking)).all()
     metas = session.exec(select(BookingMeta)).all()
     meta_map = {m.booking_id: m for m in metas}
@@ -440,11 +440,13 @@ def delete_receipt(guest_id: int, receipt_id: int, user: dict = Depends(_get_cur
 # Check-in/out
 @router.get("/checkins")
 def list_checkins(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "security")
     return session.exec(select(CheckInRecord)).all()
 
 
 @router.post("/checkins")
 def create_checkin(payload: CheckInCreate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "security")
     record = CheckInRecord(**payload.model_dump())
     session.add(record)
     session.commit()
@@ -454,6 +456,7 @@ def create_checkin(payload: CheckInCreate, user: dict = Depends(_get_current_erp
 
 @router.put("/checkins/{checkin_id}")
 def update_checkin(checkin_id: int, payload: CheckInUpdate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "security")
     record = session.get(CheckInRecord, checkin_id)
     if not record:
         raise HTTPException(status_code=404, detail="Check-in record not found")
@@ -472,11 +475,13 @@ def update_checkin(checkin_id: int, payload: CheckInUpdate, user: dict = Depends
 # Housekeeping
 @router.get("/housekeeping")
 def list_housekeeping(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "housekeeping", "laundry")
     return session.exec(select(HousekeepingTask)).all()
 
 
 @router.post("/housekeeping")
 def create_housekeeping(payload: HousekeepingCreate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "housekeeping", "laundry")
     task = HousekeepingTask(**payload.model_dump())
     session.add(task)
     session.commit()
@@ -486,6 +491,7 @@ def create_housekeeping(payload: HousekeepingCreate, user: dict = Depends(_get_c
 
 @router.put("/housekeeping/{task_id}")
 def update_housekeeping(task_id: int, payload: HousekeepingUpdate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "housekeeping", "laundry")
     task = session.get(HousekeepingTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -501,6 +507,7 @@ def update_housekeeping(task_id: int, payload: HousekeepingUpdate, user: dict = 
 
 @router.delete("/housekeeping/{task_id}")
 def delete_housekeeping(task_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager")
     task = session.get(HousekeepingTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -550,11 +557,13 @@ def delete_floorplan_item(item_id: int, user: dict = Depends(_get_current_erp_us
 # Inventory
 @router.get("/inventory")
 def list_inventory(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "bar_attendant", "storekeeper", "chef", "kitchen_staff", "restaurant_waiter", "room_service", "events_banquets")
     return session.exec(select(InventoryItem)).all()
 
 
 @router.post("/inventory")
 def create_inventory_item(payload: InventoryCreate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "storekeeper", "chef", "kitchen_staff", "bar_attendant")
     item = InventoryItem(**payload.model_dump())
     session.add(item)
     session.commit()
@@ -564,6 +573,7 @@ def create_inventory_item(payload: InventoryCreate, user: dict = Depends(_get_cu
 
 @router.put("/inventory/{item_id}")
 def update_inventory_item(item_id: int, payload: InventoryUpdate, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "storekeeper", "chef", "kitchen_staff", "bar_attendant")
     item = session.get(InventoryItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
@@ -578,6 +588,7 @@ def update_inventory_item(item_id: int, payload: InventoryUpdate, user: dict = D
 
 @router.delete("/inventory/{item_id}")
 def delete_inventory_item(item_id: int, user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "storekeeper")
     item = session.get(InventoryItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
@@ -589,6 +600,7 @@ def delete_inventory_item(item_id: int, user: dict = Depends(_get_current_erp_us
 # Announcements
 @router.get("/announcements")
 def list_announcements(user: dict = Depends(_get_current_erp_user), session: Session = Depends(get_session)):
+    _require_module(user, "manager", "assistant_manager", "receptionist", "concierge", "housekeeping", "laundry", "maintenance", "security", "bar_attendant", "storekeeper", "chef", "kitchen_staff", "restaurant_waiter", "room_service", "events_banquets", "it_support", "hr_officer", "sales_marketing")
     now = datetime.utcnow()
     if user.get("role") == "admin":
         return session.exec(select(Announcement)).all()

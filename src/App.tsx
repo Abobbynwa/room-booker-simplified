@@ -38,7 +38,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/erp/login" element={<ERPLogin />} />
             <Route path="/erp" element={<ERPDashboard />} />
-            <Route path="/admin-app/login" element={<Navigate to="/erp/login?access=erp" replace />} />
+            <Route path="/admin-app/login" element={<Navigate to="/erp/login?access=erp&mode=admin" replace />} />
             <Route path="/admin-app" element={<ERPDashboard />} />
             <Route path="/admin" element={<Navigate to="/admin-app" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

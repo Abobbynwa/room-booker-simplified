@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
 from ..db_core import get_session
-from ..models import Booking, BookingMeta
+from ..models import Booking, BookingMeta, CheckInRecord
 from ..schemas import BookingCreate
 from ..utils.email import send_email
 from ..utils.sms import send_sms
@@ -41,6 +41,17 @@ def submit_booking(
         meta.payment_proof = booking.payment_proof
         meta.payment_status = "pending"
     session.add(meta)
+    session.commit()
+
+    # Put every confirmed booking into the arrival queue for reception.
+    checkin = CheckInRecord(
+        booking_id=b.id,
+        guest_name=b.name,
+        room_id=b.room_type,
+        room_number=b.room_type,
+        status="expected",
+    )
+    session.add(checkin)
     session.commit()
 
     admin_email = os.getenv("ADMIN_ALERT_EMAIL")
